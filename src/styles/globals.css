@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Content backgrounds (light) */
+  --bg-base:          #F8F7FF;
+  --bg-surface:       #FFFFFF;
+  --bg-surface-2:     #F0EEFF;
+  --bg-input:         #F5F3FF;
+
+  /* Sidebar/titlebar (dark) */
+  --sidebar-from:     #0A0418;
+  --sidebar-to:       #1A0A35;
+
+  /* Borders */
+  --border-subtle:    #EDE9FE;
+  --border-strong:    #DDD6FE;
+
+  /* Accent — violet */
+  --accent:           #6D28D9;
+  --accent-end:       #7C3AED;
+  --accent-soft:      #EDE9FE;
+  --accent-glow:      rgba(124, 58, 237, 0.15);
+
+  /* Text — content area */
+  --text-primary:     #1A0A35;
+  --text-secondary:   #5B4F7A;
+  --text-tertiary:    #9B8BBF;
+  --text-success:     #059669;
+
+  /* Text — sidebar */
+  --sidebar-text:       #FFFFFF;
+  --sidebar-text-muted: #8B7BB5;
+
+  /* Habit cells */
+  --cell-filled:      #6D28D9;
+  --cell-filled-from: #5B21B6;
+  --cell-filled-to:   #7C3AED;
+  --cell-empty:       #F5F3FF;
+  --cell-disabled:    #C4B5F5;
+
+  /* Responsive cell size: scales with viewport, fits 31 cols on 1280px */
+  --cell-size: clamp(19px, 1.7vw, 25px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#__next,
+html,
+body {
+  height: 100%;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface-2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
