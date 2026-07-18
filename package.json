@@ -37,6 +37,7 @@
     "appId": "com.habittracker.app",
     "productName": "Habit Tracker",
     "copyright": "Copyright © 2026",
+    "publish": null,
     "directories": {
       "output": "release",
       "buildResources": "build"
