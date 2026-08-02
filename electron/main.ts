@@ -11,6 +11,8 @@ import { syncAutoLaunch } from './autoLaunch'
 import { getSetting } from './db/queries/settings'
 import { getReport, generateReport } from './db/queries/reports'
 import { format, subMonths } from 'date-fns'
+import { isWithinGracePeriod } from '../shared/backfillLogic'
+import { SETTING_KEYS } from '../shared/types'
 
 const isDev = !app.isPackaged
 
@@ -97,6 +99,11 @@ async function checkAndGenerateMonthlyReport() {
   const lastMonth = format(subMonths(new Date(), 1), 'yyyy-MM')
   const existing = getReport(lastMonth)
   if (!existing) {
+    const backfillEnabled = getSetting(SETTING_KEYS.BACKFILL_HABITS) === 'true'
+    if (backfillEnabled && isWithinGracePeriod(lastMonth)) {
+      // Still inside the backfill grace window — retry on the next launch.
+      return
+    }
     try {
       const apiKey = getSetting('claude_api_key') ?? ''
       const report = await generateReport(lastMonth, apiKey)

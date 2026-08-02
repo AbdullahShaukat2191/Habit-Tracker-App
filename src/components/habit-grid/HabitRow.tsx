@@ -11,6 +11,7 @@ import {
   buildCompletionSet,
   getApplicableDays,
 } from '@shared/habitLogic'
+import { getPreviousMonth, isWithinGracePeriod } from '@shared/backfillLogic'
 import { HabitCell } from './HabitCell'
 import { HabitScoreColumn } from './HabitScoreColumn'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
@@ -73,8 +74,13 @@ const HabitRowInner = ({
     [habit.schedule, currentMonth]
   )
 
-  const isCurrentMonth = currentMonth === today.slice(0, 7)
-  const allowPastDays = backfillEnabled && isCurrentMonth
+  const todayMonth = today.slice(0, 7)
+  const isCurrentMonth = currentMonth === todayMonth
+  const isGraceEligible =
+    backfillEnabled &&
+    currentMonth === getPreviousMonth(todayMonth) &&
+    isWithinGracePeriod(currentMonth)
+  const allowPastDays = backfillEnabled && (isCurrentMonth || isGraceEligible)
 
   const handleToggle = useCallback(
     (dateStr: string) => {

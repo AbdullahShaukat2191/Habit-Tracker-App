@@ -16,9 +16,13 @@ import {
 } from '@dnd-kit/sortable'
 import type { Habit, HabitCompletion } from '@shared/types'
 import { computeScore, buildCompletionSet, getApplicableDays, isApplicableDay } from '@shared/habitLogic'
+import { getPreviousMonth } from '@shared/backfillLogic'
 import { HabitGridHeader } from './HabitGridHeader'
 import { HabitRow } from './HabitRow'
+import { GraceCountdown } from './GraceCountdown'
 import { NAME_COL_WIDTH, SCORE_COL_WIDTH } from './constants'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
 
 interface HabitGridProps {
   habits: Habit[]
@@ -100,7 +104,11 @@ export function HabitGrid({
     [habits, completions, currentMonth]
   )
 
-  const isCurrentMonth = currentMonth === today.slice(0, 7)
+  const todayMonth = today.slice(0, 7)
+  const isCurrentMonth = currentMonth === todayMonth
+  const backfillEnabled = useSettingsStore((s) => s.get(SETTING_KEYS.BACKFILL_HABITS) === 'true')
+  const isGraceEligibleMonth =
+    backfillEnabled && !isCurrentMonth && currentMonth === getPreviousMonth(todayMonth)
 
   // Completion lookup: habitId → Set<dateStr>
   const completionsByHabit = useMemo(() => {
@@ -266,6 +274,8 @@ export function HabitGrid({
                           ))}
                         </ul>
                       )
+                    ) : isGraceEligibleMonth ? (
+                      <GraceCountdown month={currentMonth} />
                     ) : (
                       <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Past month — read only</div>
                     )}
