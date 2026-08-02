@@ -22,6 +22,7 @@ interface ElectronAPI {
   deleteHabit: (id: string) => Promise<void>
   reorderHabits: (ids: string[]) => Promise<void>
   getHabitCompletions: (month: string) => Promise<HabitCompletion[]>
+  getAllHabitCompletions: () => Promise<HabitCompletion[]>
   toggleHabitCompletion: (habitId: string, date: string) => Promise<ToggleResult>
 
   listTasks: () => Promise<Task[]>

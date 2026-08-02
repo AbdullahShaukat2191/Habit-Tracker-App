@@ -19,6 +19,7 @@ export default function HabitScorecardPage() {
   const toggleCompletion = useHabitStore((s) => s.toggleCompletion)
   const loadHabits = useHabitStore((s) => s.loadHabits)
   const loadCompletions = useHabitStore((s) => s.loadCompletions)
+  const loadAllCompletions = useHabitStore((s) => s.loadAllCompletions)
   const createHabit = useHabitStore((s) => s.createHabit)
   const updateHabit = useHabitStore((s) => s.updateHabit)
   const deleteHabit = useHabitStore((s) => s.deleteHabit)
@@ -86,6 +87,7 @@ export default function HabitScorecardPage() {
   // Load data on mount
   useEffect(() => {
     loadHabits()
+    loadAllCompletions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

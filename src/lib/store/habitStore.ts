@@ -7,12 +7,14 @@ import { format } from 'date-fns'
 interface HabitStore {
   habits: Habit[]
   completions: HabitCompletion[]
+  allCompletions: HabitCompletion[]
   currentMonth: string // 'YYYY-MM'
   loading: boolean
   error: string | null
 
   loadHabits: () => Promise<void>
   loadCompletions: (month: string) => Promise<void>
+  loadAllCompletions: () => Promise<void>
   setCurrentMonth: (month: string) => void
   createHabit: (name: string, schedule: Habit['schedule'], isOptional?: boolean) => Promise<void>
   updateHabit: (id: string, name: string, schedule: Habit['schedule'], isOptional?: boolean) => Promise<void>
@@ -24,6 +26,7 @@ interface HabitStore {
 export const useHabitStore = create<HabitStore>((set, get) => ({
   habits: [],
   completions: [],
+  allCompletions: [],
   currentMonth: format(new Date(), 'yyyy-MM'),
   loading: false,
   error: null,
@@ -42,6 +45,15 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     try {
       const completions = await ipc.getHabitCompletions(month)
       set({ completions })
+    } catch (e) {
+      set({ error: String(e) })
+    }
+  },
+
+  loadAllCompletions: async () => {
+    try {
+      const allCompletions = await ipc.getAllHabitCompletions()
+      set({ allCompletions })
     } catch (e) {
       set({ error: String(e) })
     }
@@ -79,12 +91,15 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   toggleCompletion: async (habitId, date) => {
     const result = await ipc.toggleHabitCompletion(habitId, date)
     if (result === 'completed') {
+      const completion = { habitId, date, completedAt: Date.now() }
       set((s) => ({
-        completions: [...s.completions, { habitId, date, completedAt: Date.now() }],
+        completions: [...s.completions, completion],
+        allCompletions: [...s.allCompletions, completion],
       }))
     } else {
       set((s) => ({
         completions: s.completions.filter((c) => !(c.habitId === habitId && c.date === date)),
+        allCompletions: s.allCompletions.filter((c) => !(c.habitId === habitId && c.date === date)),
       }))
     }
   },

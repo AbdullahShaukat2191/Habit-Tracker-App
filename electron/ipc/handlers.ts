@@ -31,6 +31,7 @@ export function registerAllHandlers() {
   handle('habits:delete', (id) => habitQueries.deleteHabit(id))
   handle('habits:reorder', (ids) => habitQueries.reorderHabits(ids))
   handle('habits:completions', (month) => habitQueries.getHabitCompletions(month))
+  handle('habits:allCompletions', () => habitQueries.getAllHabitCompletions())
   handle('habits:toggle', (habitId, date) => habitQueries.toggleHabitCompletion(habitId, date))
 
   // Tasks

@@ -16,6 +16,7 @@ import { HabitCell } from './HabitCell'
 import { HabitScoreColumn } from './HabitScoreColumn'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { useSettingsStore } from '@/lib/store/settingsStore'
+import { useHabitStore } from '@/lib/store/habitStore'
 import { SETTING_KEYS } from '@shared/types'
 import { NAME_COL_WIDTH } from './constants'
 
@@ -45,6 +46,7 @@ const HabitRowInner = ({
   const [isHovered, setIsHovered] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const backfillEnabled = useSettingsStore((s) => s.get(SETTING_KEYS.BACKFILL_HABITS) === 'true')
+  const allCompletions = useHabitStore((s) => s.allCompletions)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: habit.id })
@@ -64,9 +66,14 @@ const HabitRowInner = ({
     () => computeScore(habit.schedule, completedDates, currentMonth),
     [habit.schedule, completedDates, currentMonth]
   )
+  // Full history (not just the viewed month) so streaks carry over month boundaries
+  const streakCompletedDates = useMemo(
+    () => buildCompletionSet(allCompletions, habit.id),
+    [allCompletions, habit.id]
+  )
   const streak = useMemo(
-    () => computeStreak(habit.schedule, completedDates),
-    [habit.schedule, completedDates]
+    () => computeStreak(habit.schedule, streakCompletedDates),
+    [habit.schedule, streakCompletedDates]
   )
   // Full-month applicable days — denominator for score display
   const applicableDays = useMemo(

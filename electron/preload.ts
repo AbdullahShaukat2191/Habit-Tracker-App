@@ -29,6 +29,8 @@ const api = {
     ipcRenderer.invoke('habits:reorder', ids),
   getHabitCompletions: (month: string): Promise<HabitCompletion[]> =>
     ipcRenderer.invoke('habits:completions', month),
+  getAllHabitCompletions: (): Promise<HabitCompletion[]> =>
+    ipcRenderer.invoke('habits:allCompletions'),
   toggleHabitCompletion: (habitId: string, date: string): Promise<ToggleResult> =>
     ipcRenderer.invoke('habits:toggle', habitId, date),
 

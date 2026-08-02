@@ -97,6 +97,19 @@ export function getHabitCompletions(month: string): HabitCompletion[] {
     }))
 }
 
+export function getAllHabitCompletions(): HabitCompletion[] {
+  const db = getDb()
+  return db
+    .select()
+    .from(habitCompletions)
+    .all()
+    .map((row) => ({
+      habitId: row.habitId,
+      date: row.date,
+      completedAt: row.completedAt,
+    }))
+}
+
 export function toggleHabitCompletion(habitId: string, date: string): ToggleResult {
   const db = getDb()
   const existing = db

@@ -31,6 +31,7 @@ export const updateHabit = (id: string, input: UpdateHabitInput): Promise<Habit>
 export const deleteHabit = (id: string): Promise<void> => api().deleteHabit(id)
 export const reorderHabits = (ids: string[]): Promise<void> => api().reorderHabits(ids)
 export const getHabitCompletions = (month: string): Promise<HabitCompletion[]> => api().getHabitCompletions(month)
+export const getAllHabitCompletions = (): Promise<HabitCompletion[]> => api().getAllHabitCompletions()
 export const toggleHabitCompletion = (habitId: string, date: string): Promise<ToggleResult> =>
   api().toggleHabitCompletion(habitId, date)
 
