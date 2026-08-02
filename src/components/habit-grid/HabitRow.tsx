@@ -72,8 +72,8 @@ const HabitRowInner = ({
     [allCompletions, habit.id]
   )
   const streak = useMemo(
-    () => computeStreak(habit.schedule, streakCompletedDates),
-    [habit.schedule, streakCompletedDates]
+    () => computeStreak(habit.schedule, streakCompletedDates, { backfillEnabled }),
+    [habit.schedule, streakCompletedDates, backfillEnabled]
   )
   // Full-month applicable days — denominator for score display
   const applicableDays = useMemo(
