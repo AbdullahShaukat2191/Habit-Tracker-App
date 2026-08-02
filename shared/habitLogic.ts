@@ -3,7 +3,6 @@
 
 import type { DayAbbreviation, HabitCompletion } from './types'
 import { getDaysInMonth, format, addDays } from 'date-fns'
-import { isDayStillEditable } from './backfillLogic'
 
 const DAY_INDEX_MAP: Record<number, DayAbbreviation> = {
   0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
@@ -38,30 +37,15 @@ export function computeScore(
   return { completed, applicable }
 }
 
-export interface ComputeStreakOptions {
-  now?: Date
-  // When true, a day only breaks the streak once it's permanently locked (its month
-  // has ended and its backfill grace window has closed) — not merely because you
-  // haven't gotten around to it yet. Defaults to false, which preserves the original
-  // behavior: only "today" gets a pass.
-  backfillEnabled?: boolean
-}
-
 export function computeStreak(
   schedule: DayAbbreviation[],
-  completedDates: Set<string>,
-  options: ComputeStreakOptions = {}
+  completedDates: Set<string>
 ): number {
-  const now = options.now ?? new Date()
-  const backfillEnabled = options.backfillEnabled ?? false
-  const todayStr = format(now, 'yyyy-MM-dd')
-
   let streak = 0
-  let cursor = now
-  let iterations = 0
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  let cursor = new Date()
 
-  while (streak <= 365 && iterations < 800) {
-    iterations++
+  while (streak <= 365) {
     const dateStr = format(cursor, 'yyyy-MM-dd')
 
     // Skip non-scheduled days — they never break a streak
@@ -70,21 +54,17 @@ export function computeStreak(
       continue
     }
 
-    if (completedDates.has(dateStr)) {
-      streak++
+    // Today hasn't been done yet — skip it so the streak from prior days is preserved
+    if (dateStr === todayStr && !completedDates.has(dateStr)) {
       cursor = addDays(cursor, -1)
       continue
     }
 
-    // Not completed — if there's still a chance to fill it in, don't count it as a
-    // miss yet, just move on without breaking the streak.
-    if (isDayStillEditable(dateStr, todayStr, backfillEnabled, now)) {
-      cursor = addDays(cursor, -1)
-      continue
-    }
+    // A past scheduled day was missed — streak is broken
+    if (!completedDates.has(dateStr)) break
 
-    // Permanently missed — streak is broken
-    break
+    streak++
+    cursor = addDays(cursor, -1)
   }
 
   return streak

@@ -104,60 +104,6 @@ describe('computeStreak', () => {
     expect(streak).toBe(3) // breaks at the gap (day 4)
   })
 
-  test('backfillEnabled: false (default) still breaks on an unfilled day even if it is still editable', () => {
-    // Same shape as the reported scenario, but without opting into the new leniency —
-    // must behave exactly like before: only "today" gets a pass.
-    const completed = new Set(['2026-07-31', '2026-08-01'])
-    const now = new Date(2026, 7, 3) // Aug 3; Aug 2 is unfilled and not today
-    const streak = computeStreak(
-      ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-      completed,
-      { now }
-    )
-    expect(streak).toBe(0)
-  })
-
-  test('backfillEnabled: true does not break the streak on a day that is still fixable', () => {
-    const completed = new Set(['2026-07-31', '2026-08-01'])
-    const now = new Date(2026, 7, 3) // Aug 3; Aug 2 unfilled but still editable (current month)
-    const streak = computeStreak(
-      ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-      completed,
-      { now, backfillEnabled: true }
-    )
-    expect(streak).toBe(2) // Aug 1 + July 31
-  })
-
-  test('reported scenario: a 26-day July run plus Aug 1 carries over to 27, ignoring unfilled Aug 2/3', () => {
-    const completed = new Set<string>()
-    // 26 consecutive July days: July 6 through July 31
-    for (let d = 6; d <= 31; d++) {
-      completed.add(`2026-07-${String(d).padStart(2, '0')}`)
-    }
-    completed.add('2026-08-01')
-    // Aug 2 and Aug 3 (today) are deliberately left unfilled
-
-    const now = new Date(2026, 7, 3) // Aug 3
-    const streak = computeStreak(
-      ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-      completed,
-      { now, backfillEnabled: true }
-    )
-    expect(streak).toBe(27) // 26 from July + 1 from Aug 1
-  })
-
-  test('a day before the current-month/grace window is a genuine, permanent miss', () => {
-    // July's grace window has closed by Aug 3, so a real gap in July still breaks the streak
-    const completed = new Set(['2026-07-31', '2026-08-01']) // July 30 is missing
-    const now = new Date(2026, 7, 3)
-    const streak = computeStreak(
-      ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
-      completed,
-      { now, backfillEnabled: true }
-    )
-    expect(streak).toBe(2) // July 31 + Aug 1, breaks at the missing July 30
-  })
-
   test('non-applicable days do not break streak', () => {
     // Weekday-only habit: find the last Sunday and verify skipping it doesn't break streak
     // Build 7 days of completed — skipping Sundays

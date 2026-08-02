@@ -26,23 +26,3 @@ export function isWithinGracePeriod(month: string, now: Date = new Date()): bool
 export function getGraceRemainingMs(month: string, now: Date = new Date()): number {
   return Math.max(0, getGraceDeadline(month).getTime() - now.getTime())
 }
-
-// A day only counts as a permanent miss once there's no longer any way to go back
-// and fill it in: today is always still editable; a past day is still editable if
-// it's in the current month (backfill lets you edit any day of the current month),
-// or it's in the previous month and that month's grace window hasn't closed yet.
-export function isDayStillEditable(
-  dateStr: string,
-  today: string,
-  backfillEnabled: boolean,
-  now: Date = new Date()
-): boolean {
-  if (dateStr === today) return true
-  if (!backfillEnabled) return false
-
-  const month = dateStr.slice(0, 7)
-  const todayMonth = today.slice(0, 7)
-  if (month === todayMonth) return true
-  if (month === getPreviousMonth(todayMonth) && isWithinGracePeriod(month, now)) return true
-  return false
-}

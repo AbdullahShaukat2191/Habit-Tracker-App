@@ -3,7 +3,6 @@ import {
   getGraceDeadline,
   isWithinGracePeriod,
   getGraceRemainingMs,
-  isDayStillEditable,
 } from '../backfillLogic'
 
 describe('getPreviousMonth', () => {
@@ -67,36 +66,5 @@ describe('getGraceRemainingMs', () => {
   test('never goes negative once the deadline has passed', () => {
     const wellAfter = new Date(2026, 8, 1) // a month past the deadline
     expect(getGraceRemainingMs('2026-07', wellAfter)).toBe(0)
-  })
-})
-
-describe('isDayStillEditable', () => {
-  const today = '2026-08-03'
-
-  test('today is always editable, even with backfill off', () => {
-    expect(isDayStillEditable(today, today, false)).toBe(true)
-  })
-
-  test('a past day is not editable when backfill is disabled', () => {
-    expect(isDayStillEditable('2026-08-01', today, false)).toBe(false)
-  })
-
-  test('any day in the current month is editable when backfill is on', () => {
-    expect(isDayStillEditable('2026-08-01', today, true)).toBe(true)
-    expect(isDayStillEditable('2026-08-02', today, true)).toBe(true)
-  })
-
-  test('previous month is editable while its grace window is open', () => {
-    const stillInGrace = new Date(2026, 7, 1, 12, 0, 0) // Aug 1, noon
-    expect(isDayStillEditable('2026-07-31', '2026-08-01', true, stillInGrace)).toBe(true)
-  })
-
-  test('previous month is locked once its grace window has closed', () => {
-    const graceClosed = new Date(2026, 7, 3) // Aug 3
-    expect(isDayStillEditable('2026-07-31', '2026-08-03', true, graceClosed)).toBe(false)
-  })
-
-  test('two months back is always locked regardless of backfill', () => {
-    expect(isDayStillEditable('2026-06-15', today, true)).toBe(false)
   })
 })
