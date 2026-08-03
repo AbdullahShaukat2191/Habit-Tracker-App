@@ -5,9 +5,10 @@ import { format, addMonths, subMonths } from 'date-fns'
 import { useFinanceStore } from '@/lib/store/financeStore'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
-import { sumForMonth, sumForWeek, getMonthRange, getMonthlyTrend } from '@shared/financeLogic'
+import { sumForMonth, sumForWeek, getMonthRange, getMonthlyTrend, getWeekdayTotals } from '@shared/financeLogic'
 import { BudgetStrip } from './BudgetStrip'
 import { SpendingTrendChart } from './SpendingTrendChart'
+import { WeeklySpendingChart } from './WeeklySpendingChart'
 import { TransactionRow } from './TransactionRow'
 import { TransactionModal } from './TransactionModal'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
@@ -53,6 +54,7 @@ export function FinanceDashboard() {
   }, [transactions, viewedMonth])
 
   const trendData = useMemo(() => getMonthlyTrend(transactions, viewedMonth, 6), [transactions, viewedMonth])
+  const weekdayTotals = useMemo(() => getWeekdayTotals(transactions, today), [transactions, today])
 
   const goToPrevMonth = useCallback(() => {
     setViewedMonth((m) => format(subMonths(parseMonthString(m), 1), 'yyyy-MM'))
@@ -90,11 +92,19 @@ export function FinanceDashboard() {
 
       <BudgetStrip spent={spentThisMonth} />
 
-      <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Spending Trend
-        </h3>
-        <SpendingTrendChart data={trendData} />
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20 }}>
+        <div style={{ flex: '1 1 380px', minWidth: 320, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '18px 20px' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Spending Trend
+          </h3>
+          <SpendingTrendChart data={trendData} />
+        </div>
+        <div style={{ flex: '1 1 380px', minWidth: 320, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '18px 20px' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            This Week
+          </h3>
+          <WeeklySpendingChart data={weekdayTotals} />
+        </div>
       </div>
 
       <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
