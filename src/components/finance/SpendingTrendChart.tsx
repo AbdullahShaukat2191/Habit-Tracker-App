@@ -66,7 +66,7 @@ export function SpendingTrendChart({ data }: SpendingTrendChartProps) {
               style={{ cursor: 'pointer' }}
             />
             <text x={p.x} y={HEIGHT - 6} fontSize={10} fill="var(--text-tertiary)" textAnchor="middle">
-              {format(new Date(p.month + '-01'), 'MMM')}
+              {format(new Date(p.month + '-01T12:00:00'), 'MMM')}
             </text>
           </g>
         ))}
@@ -90,7 +90,7 @@ export function SpendingTrendChart({ data }: SpendingTrendChartProps) {
           }}
         >
           <strong style={{ color: 'var(--text-primary)' }}>Rs. {hovered.total.toLocaleString()}</strong>{' '}
-          <span style={{ color: 'var(--text-secondary)' }}>{format(new Date(hovered.month + '-01'), 'MMMM yyyy')}</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{format(new Date(hovered.month + '-01T12:00:00'), 'MMMM yyyy')}</span>
         </div>
       )}
     </div>
