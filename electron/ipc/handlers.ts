@@ -8,6 +8,7 @@ import * as reportQueries from '../db/queries/reports'
 import * as quoteQueries from '../db/queries/quotes'
 import * as wishlistQueries from '../db/queries/wishlist'
 import * as paymentQueries from '../db/queries/payments'
+import * as financeQueries from '../db/queries/finance'
 import { getDbPath } from '../db/client'
 import fs from 'fs'
 import path from 'path'
@@ -77,6 +78,23 @@ export function registerAllHandlers() {
   handle('paymentRecords:list', () => paymentQueries.listPaymentRecords())
   handle('paymentRecords:create', (paymentProjectId, input) => paymentQueries.createPaymentRecord(paymentProjectId, input))
   handle('paymentRecords:delete', (id) => paymentQueries.deletePaymentRecord(id))
+
+  // Finance Categories
+  handle('financeCategories:list', () => financeQueries.listFinanceCategories())
+  handle('financeCategories:create', (input) => financeQueries.createFinanceCategory(input))
+  handle('financeCategories:update', (id, input) => financeQueries.updateFinanceCategory(id, input))
+  handle('financeCategories:archive', (id) => financeQueries.archiveFinanceCategory(id))
+
+  // Finance Transactions
+  handle('financeTransactions:list', () => financeQueries.listFinanceTransactions())
+  handle('financeTransactions:create', (input) => financeQueries.createFinanceTransaction(input))
+  handle('financeTransactions:update', (id, input) => financeQueries.updateFinanceTransaction(id, input))
+  handle('financeTransactions:delete', (id) => financeQueries.deleteFinanceTransaction(id))
+
+  // Finance Savings
+  handle('financeSavings:list', () => financeQueries.listFinanceSavingsEntries())
+  handle('financeSavings:create', (input) => financeQueries.createFinanceSavingsEntry(input))
+  handle('financeSavings:delete', (id) => financeQueries.deleteFinanceSavingsEntry(id))
 
   // Goals
   handle('goals:list', () => goalQueries.listGoals())

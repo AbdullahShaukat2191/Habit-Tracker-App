@@ -3,6 +3,7 @@ import type {
   Habit, HabitCompletion, Task, Project, Goal, MonthlyReport, Quote,
   WishlistItem,
   PaymentProject, PaymentMilestone, PaymentRecord,
+  FinanceCategory, FinanceTransaction, FinanceSavingsEntry,
   CreateHabitInput, UpdateHabitInput,
   CreateTaskInput, UpdateTaskInput,
   CreateProjectInput, UpdateProjectInput,
@@ -12,6 +13,9 @@ import type {
   CreatePaymentProjectInput, UpdatePaymentProjectInput,
   CreatePaymentMilestoneInput, UpdatePaymentMilestoneInput,
   CreatePaymentRecordInput,
+  CreateFinanceCategoryInput, UpdateFinanceCategoryInput,
+  CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
+  CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult,
 } from '../../shared/types'
 
@@ -54,6 +58,18 @@ interface ElectronAPI {
   listPaymentRecords: () => Promise<PaymentRecord[]>
   createPaymentRecord: (paymentProjectId: string, input: CreatePaymentRecordInput) => Promise<PaymentRecord>
   deletePaymentRecord: (id: string) => Promise<void>
+
+  listFinanceCategories: () => Promise<FinanceCategory[]>
+  createFinanceCategory: (input: CreateFinanceCategoryInput) => Promise<FinanceCategory>
+  updateFinanceCategory: (id: string, input: UpdateFinanceCategoryInput) => Promise<FinanceCategory>
+  archiveFinanceCategory: (id: string) => Promise<void>
+  listFinanceTransactions: () => Promise<FinanceTransaction[]>
+  createFinanceTransaction: (input: CreateFinanceTransactionInput) => Promise<FinanceTransaction>
+  updateFinanceTransaction: (id: string, input: UpdateFinanceTransactionInput) => Promise<FinanceTransaction>
+  deleteFinanceTransaction: (id: string) => Promise<void>
+  listFinanceSavingsEntries: () => Promise<FinanceSavingsEntry[]>
+  createFinanceSavingsEntry: (input: CreateFinanceSavingsEntryInput) => Promise<FinanceSavingsEntry>
+  deleteFinanceSavingsEntry: (id: string) => Promise<void>
 
   listGoals: () => Promise<Goal[]>
   createGoal: (input: CreateGoalInput) => Promise<Goal>

@@ -5,6 +5,7 @@ import type {
   Habit, HabitCompletion, Task, Project, Goal, MonthlyReport, Quote,
   WishlistItem,
   PaymentProject, PaymentMilestone, PaymentRecord,
+  FinanceCategory, FinanceTransaction, FinanceSavingsEntry,
   CreateHabitInput, UpdateHabitInput,
   CreateTaskInput, UpdateTaskInput,
   CreateProjectInput, UpdateProjectInput,
@@ -14,6 +15,9 @@ import type {
   CreatePaymentProjectInput, UpdatePaymentProjectInput,
   CreatePaymentMilestoneInput, UpdatePaymentMilestoneInput,
   CreatePaymentRecordInput,
+  CreateFinanceCategoryInput, UpdateFinanceCategoryInput,
+  CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
+  CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult,
 } from '../../shared/types'
 
@@ -125,3 +129,20 @@ export const completeWishlistItem = (id: string): Promise<WishlistItem> => api()
 export const uncompleteWishlistItem = (id: string): Promise<WishlistItem> => api().uncompleteWishlistItem(id)
 export const deleteWishlistItem = (id: string): Promise<void> => api().deleteWishlistItem(id)
 export const hardDeleteWishlistItem = (id: string): Promise<void> => api().hardDeleteWishlistItem(id)
+
+// Finance Categories
+export const listFinanceCategories = (): Promise<FinanceCategory[]> => api().listFinanceCategories()
+export const createFinanceCategory = (input: CreateFinanceCategoryInput): Promise<FinanceCategory> => api().createFinanceCategory(input)
+export const updateFinanceCategory = (id: string, input: UpdateFinanceCategoryInput): Promise<FinanceCategory> => api().updateFinanceCategory(id, input)
+export const archiveFinanceCategory = (id: string): Promise<void> => api().archiveFinanceCategory(id)
+
+// Finance Transactions
+export const listFinanceTransactions = (): Promise<FinanceTransaction[]> => api().listFinanceTransactions()
+export const createFinanceTransaction = (input: CreateFinanceTransactionInput): Promise<FinanceTransaction> => api().createFinanceTransaction(input)
+export const updateFinanceTransaction = (id: string, input: UpdateFinanceTransactionInput): Promise<FinanceTransaction> => api().updateFinanceTransaction(id, input)
+export const deleteFinanceTransaction = (id: string): Promise<void> => api().deleteFinanceTransaction(id)
+
+// Finance Savings
+export const listFinanceSavingsEntries = (): Promise<FinanceSavingsEntry[]> => api().listFinanceSavingsEntries()
+export const createFinanceSavingsEntry = (input: CreateFinanceSavingsEntryInput): Promise<FinanceSavingsEntry> => api().createFinanceSavingsEntry(input)
+export const deleteFinanceSavingsEntry = (id: string): Promise<void> => api().deleteFinanceSavingsEntry(id)

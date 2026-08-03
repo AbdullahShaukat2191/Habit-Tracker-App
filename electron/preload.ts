@@ -3,6 +3,7 @@ import type {
   Habit, HabitCompletion, Task, Project, Goal, MonthlyReport, Quote,
   WishlistItem,
   PaymentProject, PaymentMilestone, PaymentRecord,
+  FinanceCategory, FinanceTransaction, FinanceSavingsEntry,
   CreateHabitInput, UpdateHabitInput,
   CreateTaskInput, UpdateTaskInput,
   CreateProjectInput, UpdateProjectInput,
@@ -12,6 +13,9 @@ import type {
   CreatePaymentProjectInput, UpdatePaymentProjectInput,
   CreatePaymentMilestoneInput, UpdatePaymentMilestoneInput,
   CreatePaymentRecordInput,
+  CreateFinanceCategoryInput, UpdateFinanceCategoryInput,
+  CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
+  CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult,
 } from '../shared/types'
 
@@ -93,6 +97,34 @@ const api = {
     ipcRenderer.invoke('paymentRecords:create', paymentProjectId, input),
   deletePaymentRecord: (id: string): Promise<void> =>
     ipcRenderer.invoke('paymentRecords:delete', id),
+
+  // --- Finance Categories ---
+  listFinanceCategories: (): Promise<FinanceCategory[]> =>
+    ipcRenderer.invoke('financeCategories:list'),
+  createFinanceCategory: (input: CreateFinanceCategoryInput): Promise<FinanceCategory> =>
+    ipcRenderer.invoke('financeCategories:create', input),
+  updateFinanceCategory: (id: string, input: UpdateFinanceCategoryInput): Promise<FinanceCategory> =>
+    ipcRenderer.invoke('financeCategories:update', id, input),
+  archiveFinanceCategory: (id: string): Promise<void> =>
+    ipcRenderer.invoke('financeCategories:archive', id),
+
+  // --- Finance Transactions ---
+  listFinanceTransactions: (): Promise<FinanceTransaction[]> =>
+    ipcRenderer.invoke('financeTransactions:list'),
+  createFinanceTransaction: (input: CreateFinanceTransactionInput): Promise<FinanceTransaction> =>
+    ipcRenderer.invoke('financeTransactions:create', input),
+  updateFinanceTransaction: (id: string, input: UpdateFinanceTransactionInput): Promise<FinanceTransaction> =>
+    ipcRenderer.invoke('financeTransactions:update', id, input),
+  deleteFinanceTransaction: (id: string): Promise<void> =>
+    ipcRenderer.invoke('financeTransactions:delete', id),
+
+  // --- Finance Savings ---
+  listFinanceSavingsEntries: (): Promise<FinanceSavingsEntry[]> =>
+    ipcRenderer.invoke('financeSavings:list'),
+  createFinanceSavingsEntry: (input: CreateFinanceSavingsEntryInput): Promise<FinanceSavingsEntry> =>
+    ipcRenderer.invoke('financeSavings:create', input),
+  deleteFinanceSavingsEntry: (id: string): Promise<void> =>
+    ipcRenderer.invoke('financeSavings:delete', id),
 
   // --- Goals ---
   listGoals: (): Promise<Goal[]> =>
