@@ -1,0 +1,124 @@
+'use client'
+import React, { useState, useMemo, useCallback } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { format, addMonths, subMonths } from 'date-fns'
+import { useFinanceStore } from '@/lib/store/financeStore'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
+import { sumForMonth, sumForWeek, getMonthRange } from '@shared/financeLogic'
+import { BudgetStrip } from './BudgetStrip'
+import { TransactionRow } from './TransactionRow'
+import { TransactionModal } from './TransactionModal'
+import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
+import { AnimatePresence } from 'framer-motion'
+import type { FinanceTransaction } from '@shared/types'
+
+type ModalState = { type: 'edit'; transaction: FinanceTransaction } | null
+
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ flex: '1 1 0', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '16px 18px' }}>
+      <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+      <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
+    </div>
+  )
+}
+
+export function FinanceDashboard() {
+  const [viewedMonth, setViewedMonth] = useState(() => format(new Date(), 'yyyy-MM'))
+  const [modalState, setModalState] = useState<ModalState>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
+  const { categories, transactions, deleteTransaction } = useFinanceStore()
+  const budgetStr = useSettingsStore((s) => s.get(SETTING_KEYS.MONTHLY_BUDGET))
+  const budget = parseFloat(budgetStr ?? '0') || 0
+
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const spentThisMonth = useMemo(() => sumForMonth(transactions, viewedMonth), [transactions, viewedMonth])
+  const spentThisWeek = useMemo(() => sumForWeek(transactions, today), [transactions, today])
+  const remaining = budget - spentThisMonth
+
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
+  const monthTransactions = useMemo(() => {
+    const { start, end } = getMonthRange(viewedMonth)
+    return transactions
+      .filter((t) => t.date >= start && t.date <= end)
+      .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : b.date.localeCompare(a.date)))
+  }, [transactions, viewedMonth])
+
+  const goToPrevMonth = useCallback(() => {
+    setViewedMonth((m) => format(subMonths(new Date(m + '-01'), 1), 'yyyy-MM'))
+  }, [])
+  const goToNextMonth = useCallback(() => {
+    setViewedMonth((m) => format(addMonths(new Date(m + '-01'), 1), 'yyyy-MM'))
+  }, [])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pendingDeleteId) return
+    await deleteTransaction(pendingDeleteId)
+    setPendingDeleteId(null)
+  }, [pendingDeleteId, deleteTransaction])
+
+  const monthLabel = format(new Date(viewedMonth + '-01'), 'MMMM yyyy')
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 32px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
+        <button onClick={goToPrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          <ChevronLeft size={18} />
+        </button>
+        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', minWidth: 140, textAlign: 'center' }}>{monthLabel}</span>
+        <button onClick={goToNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+        <StatTile label="Monthly Budget" value={`Rs. ${budget.toLocaleString()}`} />
+        <StatTile label="Spent This Month" value={`Rs. ${spentThisMonth.toLocaleString()}`} />
+        <StatTile label="Remaining" value={`Rs. ${remaining.toLocaleString()}`} />
+        <StatTile label="Spent This Week" value={`Rs. ${spentThisWeek.toLocaleString()}`} />
+      </div>
+
+      <BudgetStrip spent={spentThisMonth} />
+
+      <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        Spendings — {monthLabel}
+      </h3>
+      {monthTransactions.length === 0 ? (
+        <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>No spendings logged for {monthLabel}.</p>
+      ) : (
+        monthTransactions.map((t) => (
+          <TransactionRow
+            key={t.id}
+            transaction={t}
+            category={t.categoryId ? categoryMap.get(t.categoryId) : undefined}
+            onEdit={() => setModalState({ type: 'edit', transaction: t })}
+            onDelete={() => setPendingDeleteId(t.id)}
+          />
+        ))
+      )}
+
+      <AnimatePresence>
+        {modalState && (
+          <TransactionModal
+            key={modalState.transaction.id}
+            mode="edit"
+            transaction={modalState.transaction}
+            categories={categories}
+            onClose={() => setModalState(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {pendingDeleteId && (
+        <ConfirmDeleteModal
+          title="Delete Spending?"
+          message="This action cannot be undone."
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setPendingDeleteId(null)}
+        />
+      )}
+    </div>
+  )
+}
