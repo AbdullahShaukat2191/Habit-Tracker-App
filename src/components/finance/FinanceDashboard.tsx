@@ -5,8 +5,9 @@ import { format, addMonths, subMonths } from 'date-fns'
 import { useFinanceStore } from '@/lib/store/financeStore'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
-import { sumForMonth, sumForWeek, getMonthRange } from '@shared/financeLogic'
+import { sumForMonth, sumForWeek, getMonthRange, getMonthlyTrend } from '@shared/financeLogic'
 import { BudgetStrip } from './BudgetStrip'
+import { SpendingTrendChart } from './SpendingTrendChart'
 import { TransactionRow } from './TransactionRow'
 import { TransactionModal } from './TransactionModal'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
@@ -51,6 +52,8 @@ export function FinanceDashboard() {
       .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : b.date.localeCompare(a.date)))
   }, [transactions, viewedMonth])
 
+  const trendData = useMemo(() => getMonthlyTrend(transactions, viewedMonth, 6), [transactions, viewedMonth])
+
   const goToPrevMonth = useCallback(() => {
     setViewedMonth((m) => format(subMonths(parseMonthString(m), 1), 'yyyy-MM'))
   }, [])
@@ -86,6 +89,13 @@ export function FinanceDashboard() {
       </div>
 
       <BudgetStrip spent={spentThisMonth} />
+
+      <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Spending Trend
+        </h3>
+        <SpendingTrendChart data={trendData} />
+      </div>
 
       <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Spendings — {monthLabel}
