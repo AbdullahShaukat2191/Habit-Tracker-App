@@ -63,6 +63,64 @@ export interface UpdateWishlistInput {
   description?: string
 }
 
+// --- Finance ---
+
+export interface FinanceCategory {
+  id: string
+  name: string
+  color: string
+  sortOrder: number
+  createdAt: number
+  archivedAt: number | null
+}
+
+export interface FinanceTransaction {
+  id: string
+  title: string
+  amount: number
+  categoryId: string | null
+  date: string // 'YYYY-MM-DD'
+  createdAt: number
+}
+
+export interface FinanceSavingsEntry {
+  id: string
+  amount: number
+  note: string | null
+  date: string // 'YYYY-MM-DD'
+  createdAt: number
+}
+
+export interface CreateFinanceCategoryInput {
+  name: string
+  color: string
+}
+
+export interface UpdateFinanceCategoryInput {
+  name?: string
+  color?: string
+}
+
+export interface CreateFinanceTransactionInput {
+  title: string
+  amount: number
+  categoryId?: string | null
+  date: string
+}
+
+export interface UpdateFinanceTransactionInput {
+  title?: string
+  amount?: number
+  categoryId?: string | null
+  date?: string
+}
+
+export interface CreateFinanceSavingsEntryInput {
+  amount: number
+  note?: string
+  date: string
+}
+
 export interface MonthlyReport {
   id: string
   month: string // 'YYYY-MM'
@@ -232,4 +290,5 @@ export const SETTING_KEYS = {
   SHORTCUT_NAV_WISHLIST: 'shortcut_nav_wishlist',
   SHORTCUT_NAV_SETTINGS: 'shortcut_nav_settings',
   SHORTCUT_QUIT: 'shortcut_quit',
+  MONTHLY_BUDGET: 'monthly_budget',
 } as const

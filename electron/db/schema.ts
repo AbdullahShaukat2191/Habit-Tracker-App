@@ -112,3 +112,29 @@ export const wishlistItems = sqliteTable('wishlist_items', {
   completedAt: integer('completed_at'),
   archivedAt: integer('archived_at'),
 })
+
+export const financeCategories = sqliteTable('finance_categories', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  color: text('color').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  archivedAt: integer('archived_at'),
+})
+
+export const financeTransactions = sqliteTable('finance_transactions', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  amount: real('amount').notNull(),
+  categoryId: text('category_id').references(() => financeCategories.id),
+  date: text('date').notNull(), // 'YYYY-MM-DD'
+  createdAt: integer('created_at').notNull(),
+})
+
+export const financeSavingsEntries = sqliteTable('finance_savings_entries', {
+  id: text('id').primaryKey(),
+  amount: real('amount').notNull(),
+  note: text('note'),
+  date: text('date').notNull(), // 'YYYY-MM-DD'
+  createdAt: integer('created_at').notNull(),
+})

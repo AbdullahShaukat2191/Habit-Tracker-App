@@ -164,4 +164,38 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       FOREIGN KEY (milestone_id) REFERENCES payment_milestones(id)
     )
   `)
+
+  // Finance: categories, transactions, and the manual savings ledger
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      archived_at INTEGER
+    )
+  `)
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_transactions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      amount REAL NOT NULL,
+      category_id TEXT,
+      date TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (category_id) REFERENCES finance_categories(id)
+    )
+  `)
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS finance_savings_entries (
+      id TEXT PRIMARY KEY,
+      amount REAL NOT NULL,
+      note TEXT,
+      date TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `)
 }
