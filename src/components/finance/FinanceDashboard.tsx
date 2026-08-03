@@ -15,6 +15,11 @@ import type { FinanceTransaction } from '@shared/types'
 
 type ModalState = { type: 'edit'; transaction: FinanceTransaction } | null
 
+function parseMonthString(month: string): Date {
+  const [year, monthNum] = month.split('-').map(Number)
+  return new Date(year, monthNum - 1, 1)
+}
+
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ flex: '1 1 0', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '16px 18px' }}>
@@ -47,10 +52,10 @@ export function FinanceDashboard() {
   }, [transactions, viewedMonth])
 
   const goToPrevMonth = useCallback(() => {
-    setViewedMonth((m) => format(subMonths(new Date(m + '-01'), 1), 'yyyy-MM'))
+    setViewedMonth((m) => format(subMonths(parseMonthString(m), 1), 'yyyy-MM'))
   }, [])
   const goToNextMonth = useCallback(() => {
-    setViewedMonth((m) => format(addMonths(new Date(m + '-01'), 1), 'yyyy-MM'))
+    setViewedMonth((m) => format(addMonths(parseMonthString(m), 1), 'yyyy-MM'))
   }, [])
 
   const handleConfirmDelete = useCallback(async () => {
@@ -59,7 +64,7 @@ export function FinanceDashboard() {
     setPendingDeleteId(null)
   }, [pendingDeleteId, deleteTransaction])
 
-  const monthLabel = format(new Date(viewedMonth + '-01'), 'MMMM yyyy')
+  const monthLabel = format(parseMonthString(viewedMonth), 'MMMM yyyy')
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 32px' }}>
