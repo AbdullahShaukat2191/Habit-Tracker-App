@@ -48,6 +48,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
   const [date, setDate] = useState(transaction?.date ?? format(new Date(), 'yyyy-MM-dd'))
   const [categoryId, setCategoryId] = useState<string | null>(transaction?.categoryId ?? null)
   const [titleError, setTitleError] = useState('')
+  const [amountError, setAmountError] = useState('')
   const [saving, setSaving] = useState(false)
 
   const [showNewCategory, setShowNewCategory] = useState(false)
@@ -55,7 +56,15 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
   const [newCategoryColor, setNewCategoryColor] = useState<string>(PRESET_COLORS[0])
 
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const amountInputRef = useRef<HTMLInputElement>(null)
   const activeCategories = categories.filter((c) => c.archivedAt === null)
+  const categoriesToShow = (() => {
+    if (transaction?.categoryId && !activeCategories.some((c) => c.id === transaction.categoryId)) {
+      const archivedCategory = categories.find((c) => c.id === transaction.categoryId)
+      if (archivedCategory) return [...activeCategories, archivedCategory]
+    }
+    return activeCategories
+  })()
 
   useEffect(() => {
     const id = setTimeout(() => titleInputRef.current?.focus(), 50)
@@ -90,8 +99,13 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
       return
     }
     const parsedAmount = parseFloat(amount)
-    if (isNaN(parsedAmount) || parsedAmount <= 0) return
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setAmountError('Enter an amount greater than 0')
+      amountInputRef.current?.focus()
+      return
+    }
     setTitleError('')
+    setAmountError('')
     setSaving(true)
     try {
       if (mode === 'add') {
@@ -146,14 +160,16 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
             <label htmlFor="tx-amount-input" style={labelStyle}>Amount (Rs.)</label>
             <input
               id="tx-amount-input"
+              ref={amountInputRef}
               type="number"
               min="0"
               step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => { setAmount(e.target.value); if (amountError) setAmountError('') }}
               placeholder="0.00"
-              style={inputStyle}
+              style={{ ...inputStyle, border: `1px solid ${amountError ? '#f87171' : 'var(--border-subtle)'}` }}
             />
+            {amountError && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#f87171' }}>{amountError}</p>}
           </div>
           <div style={{ flex: 1 }}>
             <label htmlFor="tx-date-input" style={labelStyle}>Date</label>
@@ -181,7 +197,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
             >
               Uncategorized
             </button>
-            {activeCategories.map((c) => (
+            {categoriesToShow.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setCategoryId(c.id)}
@@ -193,7 +209,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
                 }}
               >
                 <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: c.color, flexShrink: 0 }} />
-                {c.name}
+                {c.name}{c.archivedAt !== null ? ' (archived)' : ''}
               </button>
             ))}
             <button
