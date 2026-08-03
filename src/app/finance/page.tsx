@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useFinanceStore } from '@/lib/store/financeStore'
 import { TransactionModal } from '@/components/finance/TransactionModal'
 import { FinanceDashboard } from '@/components/finance/FinanceDashboard'
+import { FinanceSavingsTab } from '@/components/finance/FinanceSavingsTab'
 
 export default function FinancePage() {
   const [innerTab, setInnerTab] = useState<'dashboard' | 'savings'>('dashboard')
@@ -50,11 +51,7 @@ export default function FinancePage() {
         </p>
       </div>
 
-      {innerTab === 'dashboard' ? <FinanceDashboard /> : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: 14 }}>
-          Savings tab coming in a later task.
-        </div>
-      )}
+      {innerTab === 'dashboard' ? <FinanceDashboard /> : <FinanceSavingsTab />}
 
       <AnimatePresence>
         {showAddModal && (
