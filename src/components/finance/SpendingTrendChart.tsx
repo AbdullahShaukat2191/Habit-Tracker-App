@@ -77,8 +77,8 @@ export function SpendingTrendChart({ data }: SpendingTrendChartProps) {
           style={{
             position: 'absolute',
             left: `${(hovered.x / WIDTH) * 100}%`,
-            top: hovered.y - 44,
-            transform: 'translateX(-50%)',
+            top: `${(hovered.y / HEIGHT) * 100}%`,
+            transform: 'translate(-50%, calc(-100% - 8px))',
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 6,
