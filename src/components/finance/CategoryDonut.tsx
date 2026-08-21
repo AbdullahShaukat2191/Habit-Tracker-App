@@ -4,6 +4,7 @@ import type { CategoryBreakdownEntry } from '@shared/financeLogic'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
 import { formatCurrency } from '@/lib/currency'
+import { DonutChart } from '@/components/ui/DonutChart'
 
 interface CategoryDonutProps {
   entries: CategoryBreakdownEntry[]
@@ -27,29 +28,24 @@ export function CategoryDonut({ entries }: CategoryDonutProps) {
     return { ...e, length, offset }
   })
 
+  const segments = total > 0
+    ? slices.map((s) => ({ key: s.categoryId ?? 'uncategorized', length: s.length, offset: s.offset, color: s.color }))
+    : []
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-      <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-            <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border-subtle)" strokeWidth={strokeWidth} />
-            {total > 0 &&
-              slices.map((s) => (
-                <circle
-                  key={s.categoryId ?? 'uncategorized'}
-                  cx={size / 2} cy={size / 2} r={radius} fill="none"
-                  stroke={s.color} strokeWidth={strokeWidth} strokeLinecap="round"
-                  strokeDasharray={`${s.length} ${circumference - s.length}`}
-                  strokeDashoffset={s.offset}
-                />
-              ))}
-          </g>
-        </svg>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(currency, total)}</span>
-          <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>spent</span>
-        </div>
-      </div>
+      <DonutChart
+        size={size}
+        strokeWidth={strokeWidth}
+        segments={segments}
+        style={{ flexShrink: 0 }}
+        centerContent={
+          <>
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(currency, total)}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>spent</span>
+          </>
+        }
+      />
 
       {entries.length === 0 ? (
         <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: 0 }}>No categorized spending this month.</p>

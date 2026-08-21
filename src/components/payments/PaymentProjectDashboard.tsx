@@ -7,6 +7,7 @@ import { usePaymentStore } from '@/lib/store/paymentStore'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { CURRENCIES, formatCurrency, isCurrencyCode, type CurrencyCode } from '@/lib/currency'
 import { PRESET_COLORS } from '@/lib/constants'
+import { DonutChart } from '@/components/ui/DonutChart'
 
 interface PaymentProjectDashboardProps {
   paymentProject: PaymentProject
@@ -558,40 +559,26 @@ function PaymentDonut({ paid, remaining, currency }: { paid: number; remaining: 
 
   const pct = total > 0 ? Math.round(paidPct * 100) : 0
 
+  const segments = total === 0
+    ? []
+    : [
+        { key: 'paid', length: paidLength, offset: 0, color: 'var(--accent)' },
+        { key: 'remaining', length: remainingLength, offset: remainingOffset, color: 'var(--text-tertiary)' },
+      ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-      <div style={{ position: 'relative', width: size, height: size }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-            <circle
-              cx={size / 2} cy={size / 2} r={radius} fill="none"
-              stroke="var(--border-subtle)" strokeWidth={strokeWidth}
-            />
-            {total === 0 ? null : (
-              <>
-                <circle
-                  cx={size / 2} cy={size / 2} r={radius} fill="none"
-                  stroke="var(--accent)" strokeWidth={strokeWidth} strokeLinecap="round"
-                  strokeDasharray={`${paidLength} ${circumference - paidLength}`}
-                />
-                <circle
-                  cx={size / 2} cy={size / 2} r={radius} fill="none"
-                  stroke="var(--text-tertiary)" strokeWidth={strokeWidth} strokeLinecap="round"
-                  strokeDasharray={`${remainingLength} ${circumference - remainingLength}`}
-                  strokeDashoffset={remainingOffset}
-                />
-              </>
-            )}
-          </g>
-        </svg>
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>{pct}%</span>
-          <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>paid</span>
-        </div>
-      </div>
+      <DonutChart
+        size={size}
+        strokeWidth={strokeWidth}
+        segments={segments}
+        centerContent={
+          <>
+            <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>{pct}%</span>
+            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>paid</span>
+          </>
+        }
+      />
 
       <div style={{ display: 'flex', gap: 14 }}>
         <LegendItem color="var(--accent)" label="Paid" value={paid} currency={currency} />
