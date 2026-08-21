@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
 import { formatCurrency } from '@/lib/currency'
+import { getAxisMax } from '@/lib/chartUtils'
 
 interface SpendingTrendChartProps {
   data: Array<{ month: string; total: number }>
@@ -20,10 +21,7 @@ export function SpendingTrendChart({ data }: SpendingTrendChartProps) {
   const plotWidth = WIDTH - PADDING.left - PADDING.right
   const plotHeight = HEIGHT - PADDING.top - PADDING.bottom
 
-  const maxValue = Math.max(1, ...data.map((d) => d.total))
-  // Round the axis ceiling up to a clean step
-  const step = Math.pow(10, Math.max(0, Math.floor(Math.log10(maxValue)) - 1))
-  const axisMax = Math.ceil(maxValue / step) * step || 1
+  const axisMax = getAxisMax(data.map((d) => d.total))
 
   const points = useMemo(
     () =>

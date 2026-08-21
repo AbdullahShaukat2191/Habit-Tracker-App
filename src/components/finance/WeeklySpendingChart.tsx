@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
 import { formatCurrency } from '@/lib/currency'
+import { getAxisMax } from '@/lib/chartUtils'
 
 interface WeeklySpendingChartProps {
   data: number[] // 7 entries, Monday..Sunday
@@ -34,9 +35,7 @@ export function WeeklySpendingChart({ data }: WeeklySpendingChartProps) {
 
   const plotWidth = WIDTH - PADDING.left - PADDING.right
   const plotHeight = HEIGHT - PADDING.top - PADDING.bottom
-  const maxValue = Math.max(1, ...data)
-  const step = Math.pow(10, Math.max(0, Math.floor(Math.log10(maxValue)) - 1))
-  const axisMax = Math.ceil(maxValue / step) * step || 1
+  const axisMax = getAxisMax(data)
 
   const slotWidth = plotWidth / 7
   const barWidth = Math.min(MAX_BAR_WIDTH, slotWidth * 0.6)
