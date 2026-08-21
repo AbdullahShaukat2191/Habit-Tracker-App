@@ -3,11 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import type { Project, CreatePaymentProjectInput } from '@shared/types'
 import { CURRENCIES, type CurrencyCode } from '@/lib/currency'
-
-const PRESET_COLORS = [
-  '#E879B9', '#A78BFA', '#34D399', '#60A5FA',
-  '#FBBF24', '#F87171', '#86EFAC', '#818CF8',
-] as const
+import { PRESET_COLORS } from '@/lib/constants'
 
 interface AddPaymentProjectModalProps {
   importableProjects: Project[]

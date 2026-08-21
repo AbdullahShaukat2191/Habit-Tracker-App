@@ -2,17 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import type { Project } from '@shared/types'
-
-const PRESET_COLORS = [
-  '#E879B9', // pink (accent)
-  '#A78BFA', // lavender
-  '#34D399', // mint
-  '#60A5FA', // soft blue
-  '#FBBF24', // gold
-  '#F87171', // coral
-  '#86EFAC', // sage
-  '#818CF8', // periwinkle
-] as const
+import { PRESET_COLORS } from '@/lib/constants'
 
 const COLOR_NAMES: Record<string, string> = {
   '#E879B9': 'Pink',

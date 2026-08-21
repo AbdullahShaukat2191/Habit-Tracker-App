@@ -7,11 +7,7 @@ import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
 import { getCurrencySymbol } from '@/lib/currency'
 import { format } from 'date-fns'
-
-const PRESET_COLORS = [
-  '#E879B9', '#A78BFA', '#34D399', '#60A5FA',
-  '#FBBF24', '#F87171', '#86EFAC', '#818CF8',
-] as const
+import { PRESET_COLORS } from '@/lib/constants'
 
 interface TransactionModalProps {
   mode: 'add' | 'edit'

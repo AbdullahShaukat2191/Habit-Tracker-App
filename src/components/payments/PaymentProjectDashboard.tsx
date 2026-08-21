@@ -6,11 +6,7 @@ import type { PaymentProject, PaymentMilestone, PaymentRecord } from '@shared/ty
 import { usePaymentStore } from '@/lib/store/paymentStore'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { CURRENCIES, formatCurrency, isCurrencyCode, type CurrencyCode } from '@/lib/currency'
-
-const PRESET_COLORS = [
-  '#E879B9', '#A78BFA', '#34D399', '#60A5FA',
-  '#FBBF24', '#F87171', '#86EFAC', '#818CF8',
-] as const
+import { PRESET_COLORS } from '@/lib/constants'
 
 interface PaymentProjectDashboardProps {
   paymentProject: PaymentProject
