@@ -166,7 +166,7 @@ Not a "feature" with its own data model, but a control panel over the generic `s
 
 - **Desktop-only, hard dependencies on Electron/Node:** `better-sqlite3` (native binding, rebuilt per-Electron-ABI via `electron-rebuild`), `fs`/`path` file export, frameless custom window chrome + native window controls (minimize/maximize/close via Electron `BrowserWindow` methods), system tray with context menu, OS-level global shortcut (Ctrl+Q), OS notifications (`Notification` API), `auto-launch` for "start on boot," single-instance lock, custom `app://` protocol registration for serving the static export in production.
 - **Would break in a browser/webview:** the entire IPC bridge (`window.electronAPI`) — every data operation throws if `window.electronAPI` is undefined; no server API exists as a fallback. The app cannot run as a plain website without a substantial backend rewrite.
-- **Hardcoded assumptions:** dev server port 3000 (no env override); production asset path `process.resourcesPath/out`; DB path fixed to `userData/habit-tracker.db`; two **conflicting** electron-builder configs exist simultaneously (`package.json`'s `build` field vs. standalone `electron-builder.config.js`, different `buildResources` dirs, different icon paths, different `oneClick` settings) — the standalone file wins, so the `package.json` block is dead configuration that could confuse a future maintainer.
+- **Hardcoded assumptions:** dev server port 3000 (no env override); production asset path `process.resourcesPath/out`; DB path fixed to `userData/habit-tracker.db`; `package.json`'s `build` field is the sole electron-builder config in use — a standalone `electron-builder.config.js` that used to sit alongside it was dead configuration (electron-builder never actually read it: its filename isn't in electron-builder's auto-discovery list, and `package.json`'s own `build` key short-circuits that discovery process entirely before the list is ever consulted, per `app-builder-lib/out/util/config/load.js`) and has since been removed.
 
 ## 6. Current Limitations & Tech Debt
 
@@ -175,8 +175,6 @@ Not a "feature" with its own data model, but a control panel over the generic `s
 
 **Inconsistencies:**
 - Currency formatting: Finance uses `Rs.`, Payments uses `$` — same app, two money-tracking areas, no shared formatter, no `Intl.NumberFormat` (decimals not normalized, e.g. `"1,234.5"`).
-- The 8-color preset swatch array is copy-pasted verbatim across 4 files (`ProjectModal`, `AddPaymentProjectModal`, `PaymentProjectDashboard`, `TransactionModal`) with no shared constant.
-- Donut chart math (circumference/dasharray/offset) is independently reimplemented in `CategoryDonut.tsx` and `PaymentProjectDashboard.tsx`'s inline `PaymentDonut`; axis-rounding logic is duplicated between `SpendingTrendChart.tsx` and `WeeklySpendingChart.tsx`.
 - Reorder persistence is inconsistent across near-identical features: Habits and Projects persist drag order via a `reorderX` IPC + `sortOrder` column; Goals *have* a `sortOrder` column but no persistence path exists; Wishlist has neither.
 - "Undo completion" rules differ per feature with no stated rationale: Tasks/Wishlist allow same-day-only undo, Goals allow none, Habits allow full toggle (bounded only by the backfill window).
 

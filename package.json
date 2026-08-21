@@ -1,7 +1,7 @@
 {
   "name": "habit-tracker",
-  "version": "1.21.0",
-  "_buildConfigNote": "package.json's \"build\" field is the sole electron-builder config in use. electron-builder.config.js was removed as dead config — electron-builder never actually read it (verified: it never reads a standalone .js config unless invoked with --config, which no script here does).",
+  "version": "1.21.1",
+  "_buildConfigNote": "package.json's \"build\" field is the sole electron-builder config in use. electron-builder.config.js was removed as dead config — electron-builder never actually read it (verified: its filename wasn't matched by electron-builder's config-file auto-discovery list, and package.json's own \"build\" key short-circuits that discovery process entirely before the list is ever consulted).",
   "description": "Desktop habit tracker — command center for discipline",
   "main": "dist-electron/electron/main.js",
   "scripts": {
