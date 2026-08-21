@@ -38,7 +38,7 @@ Use every planning capability available to you. Skipping the planning phase is t
 - **Confetti:** `canvas-confetti`
 - **Date utilities:** `date-fns`
 - **Auto-launch on startup:** `auto-launch`
-- **AI insights:** `@anthropic-ai/sdk` (for monthly report generation)
+- **AI insights:** `openai` (for monthly report generation)
 - **Icons:** `lucide-react`
 
 For the Next.js + Electron bridge: use a clean IPC layer with typed channels. Set up the Next.js dev server to be consumed by Electron in dev, and use `next export` (static export) wrapped by Electron for production build.

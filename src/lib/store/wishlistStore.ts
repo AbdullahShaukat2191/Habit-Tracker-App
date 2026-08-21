@@ -11,13 +11,14 @@ interface WishlistStore {
   loadItems: () => Promise<void>
   createItem: (input: CreateWishlistInput) => Promise<WishlistItem>
   updateItem: (id: string, input: UpdateWishlistInput) => Promise<void>
+  reorderItems: (ids: string[]) => Promise<void>
   completeItem: (id: string) => Promise<WishlistItem>
   uncompleteItem: (id: string) => Promise<WishlistItem>
   deleteItem: (id: string) => Promise<void>
   hardDeleteItem: (id: string) => Promise<void>
 }
 
-export const useWishlistStore = create<WishlistStore>((set) => ({
+export const useWishlistStore = create<WishlistStore>((set, get) => ({
   items: [],
   loading: false,
   error: null,
@@ -41,6 +42,16 @@ export const useWishlistStore = create<WishlistStore>((set) => ({
   updateItem: async (id, input) => {
     const updated = await ipc.updateWishlistItem(id, input)
     set((s) => ({ items: s.items.map((i) => (i.id === id ? updated : i)) }))
+  },
+
+  reorderItems: async (ids) => {
+    await ipc.reorderWishlistItems(ids)
+    const current = get().items
+    const ordered = ids.map((id, i) => {
+      const item = current.find((item) => item.id === id)!
+      return { ...item, sortOrder: i }
+    })
+    set({ items: ordered })
   },
 
   completeItem: async (id) => {

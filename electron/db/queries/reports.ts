@@ -66,7 +66,7 @@ export function computeMonthStats(month: string): MonthStats {
   const habitScores = relevantHabits.map((h) => {
     const schedule = JSON.parse(h.schedule)
     const completed = completionsByHabit.get(h.id) ?? new Set<string>()
-    const score = computeScore(schedule, completed, month)
+    const score = computeScore(schedule, completed, month, h.createdAt)
     return {
       habitId: h.id,
       name: h.name,
@@ -97,7 +97,7 @@ export function computeMonthStats(month: string): MonthStats {
       Date.now()
     ))
     const completed = completionsByHabit.get(h.id) ?? new Set<string>()
-    const streak = computeStreak(schedule, completed)
+    const streak = computeStreak(schedule, completed, h.createdAt)
     if (streak > longestStreak) longestStreak = streak
   }
 

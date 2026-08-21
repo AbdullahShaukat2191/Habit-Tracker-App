@@ -45,8 +45,10 @@ export function updateProject(id: string, input: UpdateProjectInput): Project {
 
 export function reorderProjects(ids: string[]): void {
   const db = getDb()
-  ids.forEach((id, index) => {
-    db.update(projects).set({ sortOrder: index }).where(eq(projects.id, id)).run()
+  db.transaction((tx) => {
+    ids.forEach((id, index) => {
+      tx.update(projects).set({ sortOrder: index }).where(eq(projects.id, id)).run()
+    })
   })
 }
 

@@ -16,7 +16,7 @@ import type {
   CreateFinanceCategoryInput, UpdateFinanceCategoryInput,
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
-  SettingsMap, ToggleResult,
+  SettingsMap, ToggleResult, QuoteAssignments,
 } from '../shared/types'
 
 const api = {
@@ -133,8 +133,12 @@ const api = {
     ipcRenderer.invoke('goals:create', input),
   updateGoal: (id: string, input: UpdateGoalInput): Promise<Goal> =>
     ipcRenderer.invoke('goals:update', id, input),
+  reorderGoals: (ids: string[]): Promise<void> =>
+    ipcRenderer.invoke('goals:reorder', ids),
   completeGoal: (id: string): Promise<Goal> =>
     ipcRenderer.invoke('goals:complete', id),
+  uncompleteGoal: (id: string): Promise<Goal> =>
+    ipcRenderer.invoke('goals:uncomplete', id),
   deleteGoal: (id: string): Promise<void> =>
     ipcRenderer.invoke('goals:delete', id),
 
@@ -145,6 +149,8 @@ const api = {
     ipcRenderer.invoke('wishlist:create', input),
   updateWishlistItem: (id: string, input: UpdateWishlistInput): Promise<WishlistItem> =>
     ipcRenderer.invoke('wishlist:update', id, input),
+  reorderWishlistItems: (ids: string[]): Promise<void> =>
+    ipcRenderer.invoke('wishlist:reorder', ids),
   completeWishlistItem: (id: string): Promise<WishlistItem> =>
     ipcRenderer.invoke('wishlist:complete', id),
   uncompleteWishlistItem: (id: string): Promise<WishlistItem> =>
@@ -179,6 +185,11 @@ const api = {
     ipcRenderer.invoke('quotes:delete', id),
   toggleQuoteHidden: (id: string): Promise<void> =>
     ipcRenderer.invoke('quotes:toggleHidden', id),
+
+  getAllQuoteAssignments: (): Promise<QuoteAssignments> =>
+    ipcRenderer.invoke('quoteAssignments:getAll'),
+  setQuoteAssignment: (pageId: string, tabId: string, quoteId: string): Promise<void> =>
+    ipcRenderer.invoke('quoteAssignments:set', pageId, tabId, quoteId),
 
   // --- App ---
   getAppVersion: (): Promise<string> =>
@@ -216,6 +227,17 @@ const api = {
   },
   removeReportReadyListener: () => {
     ipcRenderer.removeAllListeners('report:ready')
+  },
+
+  // --- Zoom ---
+  zoomIn: (): Promise<void> => ipcRenderer.invoke('zoom:in'),
+  zoomOut: (): Promise<void> => ipcRenderer.invoke('zoom:out'),
+  zoomReset: (): Promise<void> => ipcRenderer.invoke('zoom:reset'),
+  onZoomChanged: (callback: (percent: number) => void) => {
+    ipcRenderer.on('zoom:changed', (_event, percent: number) => callback(percent))
+  },
+  removeZoomChangedListener: () => {
+    ipcRenderer.removeAllListeners('zoom:changed')
   },
 }
 

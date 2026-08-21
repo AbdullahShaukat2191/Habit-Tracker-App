@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react'
 import { Pencil } from 'lucide-react'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { SETTING_KEYS } from '@shared/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface BudgetStripProps {
   spent: number
@@ -10,6 +11,7 @@ interface BudgetStripProps {
 
 export function BudgetStrip({ spent }: BudgetStripProps) {
   const budgetStr = useSettingsStore((s) => s.get(SETTING_KEYS.MONTHLY_BUDGET))
+  const currency = useSettingsStore((s) => s.get(SETTING_KEYS.FINANCE_CURRENCY))
   const setSetting = useSettingsStore((s) => s.set)
   const budget = parseFloat(budgetStr ?? '0') || 0
 
@@ -57,7 +59,7 @@ export function BudgetStrip({ spent }: BudgetStripProps) {
       </div>
 
       <p style={{ margin: 0, fontSize: 12, color: 'var(--text-tertiary)' }}>
-        Rs. {spent.toLocaleString()} of Rs. {budget.toLocaleString()} spent ({pct}%){overBudget ? ' — over budget' : ''}
+        {formatCurrency(currency, spent)} of {formatCurrency(currency, budget)} spent ({pct}%){overBudget ? ' — over budget' : ''}
       </p>
     </div>
   )

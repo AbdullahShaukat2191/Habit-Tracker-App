@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { format } from 'date-fns'
 import { Trash2, Pencil } from 'lucide-react'
 import type { Goal } from '@shared/types'
 import { goalConfetti } from '@/lib/confetti'
@@ -9,6 +10,7 @@ import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 interface GoalCardProps {
   goal: Goal
   onComplete: (id: string) => Promise<void>
+  onUncomplete?: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onEdit: (id: string) => void
   dragIndicator?: React.ReactNode
@@ -17,6 +19,7 @@ interface GoalCardProps {
 const GoalCard = React.memo(function GoalCard({
   goal,
   onComplete,
+  onUncomplete,
   onDelete,
   onEdit,
   dragIndicator,
@@ -25,18 +28,24 @@ const GoalCard = React.memo(function GoalCard({
   const [isHovered, setIsHovered] = useState(false)
   const wasCompletedOnMount = useRef(goal.completedAt !== null)
   const justCompletedRef = useRef(false)
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
 
   const isCompleted = goal.completedAt !== null
+  const completedToday = isCompleted && format(new Date(goal.completedAt as number), 'yyyy-MM-dd') === todayStr
+  const canUncomplete = isCompleted && completedToday && !!onUncomplete
   const shouldAnimate = isCompleted && !wasCompletedOnMount.current
 
   const handleCheckboxClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
-      if (isCompleted) return
-      justCompletedRef.current = true
-      onComplete(goal.id)
+      if (!isCompleted) {
+        justCompletedRef.current = true
+        onComplete(goal.id)
+      } else if (canUncomplete) {
+        onUncomplete!(goal.id)
+      }
     },
-    [isCompleted, onComplete, goal.id]
+    [isCompleted, canUncomplete, onComplete, onUncomplete, goal.id]
   )
 
   useEffect(() => {
@@ -85,14 +94,18 @@ const GoalCard = React.memo(function GoalCard({
       <div
         role="checkbox"
         aria-checked={isCompleted}
-        tabIndex={isCompleted ? -1 : 0}
-        aria-label={`Mark "${goal.title}" as complete`}
+        tabIndex={!isCompleted || canUncomplete ? 0 : -1}
+        aria-label={isCompleted ? (canUncomplete ? `Unmark "${goal.title}"` : goal.title) : `Mark "${goal.title}" as complete`}
         onClick={handleCheckboxClick}
         onKeyDown={(e) => {
-          if ((e.key === ' ' || e.key === 'Enter') && !isCompleted) {
+          if ((e.key === ' ' || e.key === 'Enter') && (!isCompleted || canUncomplete)) {
             e.preventDefault()
-            justCompletedRef.current = true
-            onComplete(goal.id)
+            if (!isCompleted) {
+              justCompletedRef.current = true
+              onComplete(goal.id)
+            } else {
+              onUncomplete!(goal.id)
+            }
           }
         }}
         style={{
@@ -105,10 +118,12 @@ const GoalCard = React.memo(function GoalCard({
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          cursor: isCompleted ? 'default' : 'pointer',
-          transition: 'background-color 150ms, border-color 150ms',
+          cursor: !isCompleted || canUncomplete ? 'pointer' : 'default',
+          transition: 'background-color 150ms, border-color 150ms, opacity 150ms',
           marginTop: 1,
+          opacity: isCompleted && !canUncomplete ? 0.6 : 1,
         }}
+        title={canUncomplete ? 'Click to undo (completed today)' : undefined}
       >
         {isCompleted && (
           <span style={{ color: '#ffffff', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>✓</span>

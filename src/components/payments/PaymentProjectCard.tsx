@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { PaymentProject } from '@shared/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface PaymentProjectCardProps {
   paymentProject: PaymentProject
@@ -73,9 +74,9 @@ export default function PaymentProjectCard({
 
           {/* Stat row */}
           <div style={{ display: 'flex', gap: 24 }}>
-            <Stat label="Total" value={paymentProject.totalAmount} />
-            <Stat label="Paid" value={paid} accent />
-            <Stat label="Remaining" value={remaining} />
+            <Stat label="Total" value={paymentProject.totalAmount} currency={paymentProject.currency} />
+            <Stat label="Paid" value={paid} currency={paymentProject.currency} accent />
+            <Stat label="Remaining" value={remaining} currency={paymentProject.currency} />
             <div style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{pct}%</span>
             </div>
@@ -86,14 +87,14 @@ export default function PaymentProjectCard({
   )
 }
 
-function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+function Stat({ label, value, currency, accent }: { label: string; value: number; currency: string; accent?: boolean }) {
   return (
     <div>
       <p style={{ margin: '0 0 2px', fontSize: 10, fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </p>
       <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: accent ? 'var(--accent)' : 'var(--text-primary)' }}>
-        ${value.toLocaleString()}
+        {formatCurrency(currency, value)}
       </p>
     </div>
   )

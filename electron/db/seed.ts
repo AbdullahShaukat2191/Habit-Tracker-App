@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 import path from 'path'
@@ -31,9 +31,8 @@ export function seedQuotes(db: BetterSQLite3Database<typeof schema>, appPath: st
 
     db.insert(schema.quotes).values({
       id: q.id,
-      author: q.author as 'Goggins' | 'Hormozi',
+      author: q.author,
       text: q.text,
-      source: q.source,
       bundled: true,
       hidden: false,
       addedAt: now,
@@ -55,13 +54,38 @@ export function seedDefaultSettings(db: BetterSQLite3Database<typeof schema>) {
     { key: 'launch_on_startup', value: 'false' },
     { key: 'start_minimized', value: 'false' },
     { key: 'close_to_tray', value: 'true' },
-    { key: 'claude_api_key', value: '' },
   ]
 
   for (const s of defaults) {
     const existing = db.select().from(schema.settings).where(eq(schema.settings.key, s.key)).get()
     if (!existing) {
       db.insert(schema.settings).values(s).run()
+    }
+  }
+}
+
+// Seeds default page/tab → quote assignments (the quotes that used to be
+// hardcoded per page) so existing display behavior is unchanged until
+// someone picks a different quote via the hover-to-edit picker.
+export function seedQuoteAssignments(db: BetterSQLite3Database<typeof schema>) {
+  const defaults: Array<{ pageId: string; tabId: string; quoteId: string }> = [
+    { pageId: 'tasks', tabId: 'today', quoteId: 'h023' },
+    { pageId: 'tasks', tabId: 'optional', quoteId: 'h022' },
+    { pageId: 'tasks', tabId: 'completed', quoteId: 'g007' },
+    { pageId: 'wishlist', tabId: '', quoteId: 'h012' },
+    { pageId: 'goals', tabId: '', quoteId: 'g011' },
+    { pageId: 'finance', tabId: '', quoteId: 'b001' },
+    { pageId: 'projects', tabId: '', quoteId: 'h024' },
+  ]
+
+  for (const a of defaults) {
+    const existing = db
+      .select()
+      .from(schema.quoteAssignments)
+      .where(and(eq(schema.quoteAssignments.pageId, a.pageId), eq(schema.quoteAssignments.tabId, a.tabId)))
+      .get()
+    if (!existing) {
+      db.insert(schema.quoteAssignments).values(a).run()
     }
   }
 }

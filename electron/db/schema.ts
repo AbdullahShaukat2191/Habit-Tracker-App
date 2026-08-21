@@ -33,6 +33,7 @@ export const paymentProjects = sqliteTable('payment_projects', {
   color: text('color').notNull(),
   totalAmount: real('total_amount').notNull().default(0),
   developer: text('developer'),
+  currency: text('currency').notNull().default('USD'),
   createdAt: integer('created_at').notNull(),
 })
 
@@ -96,18 +97,30 @@ export const settings = sqliteTable('settings', {
 
 export const quotes = sqliteTable('quotes', {
   id: text('id').primaryKey(),
-  author: text('author').notNull(), // 'Goggins' | 'Hormozi'
+  author: text('author').notNull(), // free-text attribution, e.g. 'David Goggins'
   text: text('text').notNull(),
-  source: text('source').notNull(),
   bundled: integer('bundled', { mode: 'boolean' }).notNull().default(false),
   hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
   addedAt: integer('added_at').notNull(),
 })
 
+// Which quote is displayed on a given page (and, optionally, a specific tab
+// within it). tabId is '' (not null) for pages with a single page-wide quote —
+// a NOT NULL sentinel avoids SQL's NULL-never-equals-NULL breaking the
+// (pageId, tabId) uniqueness this table relies on.
+export const quoteAssignments = sqliteTable('quote_assignments', {
+  pageId: text('page_id').notNull(),
+  tabId: text('tab_id').notNull().default(''),
+  quoteId: text('quote_id').notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.pageId, t.tabId] }),
+}))
+
 export const wishlistItems = sqliteTable('wishlist_items', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   description: text('description'),
+  sortOrder: integer('sort_order').notNull().default(0),
   createdAt: integer('created_at').notNull(),
   completedAt: integer('completed_at'),
   archivedAt: integer('archived_at'),

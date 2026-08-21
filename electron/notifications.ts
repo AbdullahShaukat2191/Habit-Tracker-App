@@ -1,7 +1,7 @@
 import { Notification } from 'electron'
-import { getSetting } from './db/queries/settings'
+import { getSetting, setSetting } from './db/queries/settings'
 import { getRandomVisibleQuote } from './db/queries/quotes'
-import { listHabits, getHabitCompletions } from './db/queries/habits'
+import { listHabits, getHabitCompletions, isApplicableDay } from './db/queries/habits'
 import { listTasks } from './db/queries/tasks'
 import { listGoals } from './db/queries/goals'
 import { format } from 'date-fns'
@@ -30,14 +30,30 @@ function pickNextDelayMs(): number {
   return minMs + Math.random() * (maxMs - minMs)
 }
 
+// Persisted so an app restart (or reinstall) doesn't reset an in-progress
+// countdown back to a fresh min/max-hour wait every time.
+function scheduleNextFire() {
+  nextFireTime = Date.now() + pickNextDelayMs()
+  setSetting('notify_next_fire_at', String(nextFireTime))
+}
+
 function checkAndNotify() {
   if (Date.now() < pauseUntil) return
   if (getSetting('notifications_enabled') !== 'true') return
   if (!isWithinActiveHours()) return
   if (Date.now() < nextFireTime) return
 
+  if (!Notification.isSupported()) {
+    console.warn('Notifications are not supported on this system/build — skipping.')
+    scheduleNextFire()
+    return
+  }
+
   const quote = getRandomVisibleQuote()
-  if (!quote) return
+  if (!quote) {
+    scheduleNextFire()
+    return
+  }
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const notifyHabits = getSetting('notify_habits') === 'true'
@@ -48,7 +64,7 @@ function checkAndNotify() {
   const candidates: Array<{ title: string; section: string }> = []
 
   if (notifyTasks) {
-    const incompleteTasks = listTasks().filter((t) => !t.completedAt)
+    const incompleteTasks = listTasks().filter((t) => !t.completedAt && !t.isOptional)
     incompleteTasks.forEach((t) => {
       // Weight tasks higher — add 3 entries each
       for (let i = 0; i < 3; i++) candidates.push({ title: t.title, section: 'tasks' })
@@ -59,7 +75,13 @@ function checkAndNotify() {
     const currentMonth = format(new Date(), 'yyyy-MM')
     const completions = getHabitCompletions(currentMonth)
     const completedToday = new Set(completions.filter((c) => c.date === today).map((c) => c.habitId))
-    const incompleteHabits = listHabits().filter((h) => !completedToday.has(h.id))
+    const incompleteHabits = listHabits().filter(
+      (h) =>
+        h.archivedAt === null &&
+        !h.isOptional &&
+        isApplicableDay(h.schedule, today) &&
+        !completedToday.has(h.id)
+    )
     incompleteHabits.forEach((h) => {
       // Weight habits at 1.5x tasks... simplified to 1.5 entries (round to 2)
       for (let i = 0; i < 2; i++) candidates.push({ title: h.name, section: 'habits' })
@@ -71,7 +93,10 @@ function checkAndNotify() {
     incompleteGoals.forEach((g) => candidates.push({ title: g.title, section: 'goals' }))
   }
 
-  if (candidates.length === 0) return
+  if (candidates.length === 0) {
+    scheduleNextFire()
+    return
+  }
 
   const pick = candidates[Math.floor(Math.random() * candidates.length)]
 
@@ -81,12 +106,21 @@ function checkAndNotify() {
     silent: false,
   }).show()
 
-  nextFireTime = Date.now() + pickNextDelayMs()
+  scheduleNextFire()
 }
 
 export function startNotificationScheduler() {
   if (schedulerInterval) return
-  nextFireTime = Date.now() + pickNextDelayMs()
+
+  // Resume an in-flight countdown from a previous run instead of always
+  // starting a fresh min/max-hour wait on every app launch.
+  const persisted = parseInt(getSetting('notify_next_fire_at') ?? '', 10)
+  if (Number.isFinite(persisted) && persisted > Date.now()) {
+    nextFireTime = persisted
+  } else {
+    scheduleNextFire()
+  }
+
   schedulerInterval = setInterval(checkAndNotify, 30_000)
 }
 

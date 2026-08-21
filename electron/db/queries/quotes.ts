@@ -7,9 +7,8 @@ import { randomUUID } from 'crypto'
 function rowToQuote(row: typeof quotes.$inferSelect): Quote {
   return {
     id: row.id,
-    author: row.author as 'Goggins' | 'Hormozi',
+    author: row.author,
     text: row.text,
-    source: row.source,
     bundled: Boolean(row.bundled),
     hidden: Boolean(row.hidden),
     addedAt: row.addedAt,
@@ -39,7 +38,6 @@ export function createQuote(input: CreateQuoteInput): Quote {
     id: randomUUID(),
     author: input.author,
     text: input.text,
-    source: input.source,
     bundled: false,
     hidden: false,
     addedAt: Date.now(),
@@ -52,7 +50,7 @@ export function updateQuote(id: string, input: UpdateQuoteInput): Quote {
   const db = getDb()
   const updates: Partial<typeof quotes.$inferInsert> = {}
   if (input.text !== undefined) updates.text = input.text
-  if (input.source !== undefined) updates.source = input.source
+  if (input.author !== undefined) updates.author = input.author
   db.update(quotes).set(updates).where(eq(quotes.id, id)).run()
   return rowToQuote(db.select().from(quotes).where(eq(quotes.id, id)).get()!)
 }

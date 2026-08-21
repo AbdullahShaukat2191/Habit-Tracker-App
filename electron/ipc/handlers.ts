@@ -6,10 +6,12 @@ import * as goalQueries from '../db/queries/goals'
 import * as settingQueries from '../db/queries/settings'
 import * as reportQueries from '../db/queries/reports'
 import * as quoteQueries from '../db/queries/quotes'
+import * as quoteAssignmentQueries from '../db/queries/quoteAssignments'
 import * as wishlistQueries from '../db/queries/wishlist'
 import * as paymentQueries from '../db/queries/payments'
 import * as financeQueries from '../db/queries/finance'
 import { getDbPath } from '../db/client'
+import { zoomIn, zoomOut, zoomReset } from '../zoom'
 import fs from 'fs'
 import path from 'path'
 
@@ -48,6 +50,7 @@ export function registerAllHandlers() {
   handle('wishlist:list', () => wishlistQueries.listWishlistItems())
   handle('wishlist:create', (input) => wishlistQueries.createWishlistItem(input))
   handle('wishlist:update', (id, input) => wishlistQueries.updateWishlistItem(id, input))
+  handle('wishlist:reorder', (ids) => wishlistQueries.reorderWishlistItems(ids))
   handle('wishlist:complete', (id) => wishlistQueries.completeWishlistItem(id))
   handle('wishlist:uncomplete', (id) => wishlistQueries.uncompleteWishlistItem(id))
   handle('wishlist:delete', (id) => wishlistQueries.deleteWishlistItem(id))
@@ -100,7 +103,9 @@ export function registerAllHandlers() {
   handle('goals:list', () => goalQueries.listGoals())
   handle('goals:create', (input) => goalQueries.createGoal(input))
   handle('goals:update', (id, input) => goalQueries.updateGoal(id, input))
+  handle('goals:reorder', (ids) => goalQueries.reorderGoals(ids))
   handle('goals:complete', (id) => goalQueries.completeGoal(id))
+  handle('goals:uncomplete', (id) => goalQueries.uncompleteGoal(id))
   handle('goals:delete', (id) => goalQueries.deleteGoal(id))
 
   // Settings
@@ -132,16 +137,30 @@ export function registerAllHandlers() {
   handle('quotes:delete', (id) => quoteQueries.deleteQuote(id))
   handle('quotes:toggleHidden', (id) => quoteQueries.toggleQuoteHidden(id))
 
+  // Quote assignments (which quote shows on which page/tab)
+  handle('quoteAssignments:getAll', () => quoteAssignmentQueries.getAllQuoteAssignments())
+  handle('quoteAssignments:set', (pageId, tabId, quoteId) =>
+    quoteAssignmentQueries.setQuoteAssignment(pageId, tabId, quoteId)
+  )
+
   // Quit app
   handle('app:quit', () => app.quit())
 
   // Test notification
   handle('notifications:test', () => {
+    if (!Notification.isSupported()) {
+      throw new Error('Notifications are not supported on this system.')
+    }
     new Notification({
       title: 'Habit Tracker',
       body: 'Notifications are working. Now get to work.',
     }).show()
   })
+
+  // Zoom — same logic the keyboard shortcuts use, so the popup's buttons stay in sync
+  handle('zoom:in', () => zoomIn())
+  handle('zoom:out', () => zoomOut())
+  handle('zoom:reset', () => zoomReset())
 
   // Window controls
   handle('window:minimize', () => BrowserWindow.getFocusedWindow()?.minimize())

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import type { Project, CreatePaymentProjectInput } from '@shared/types'
+import { CURRENCIES, type CurrencyCode } from '@/lib/currency'
 
 const PRESET_COLORS = [
   '#E879B9', '#A78BFA', '#34D399', '#60A5FA',
@@ -45,6 +46,7 @@ export function AddPaymentProjectModal({ importableProjects, onCreate, onImport,
   const [selectedColor, setSelectedColor] = useState<string>(PRESET_COLORS[0])
   const [totalAmount, setTotalAmount] = useState('')
   const [developer, setDeveloper] = useState('')
+  const [currency, setCurrency] = useState<CurrencyCode>('USD')
   const [nameError, setNameError] = useState('')
   const [saving, setSaving] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -83,7 +85,7 @@ export function AddPaymentProjectModal({ importableProjects, onCreate, onImport,
     setNameError('')
     setSaving(true)
     try {
-      const input: CreatePaymentProjectInput = { name: trimmed, color: selectedColor }
+      const input: CreatePaymentProjectInput = { name: trimmed, color: selectedColor, currency }
       const parsedTotal = parseFloat(totalAmount)
       if (!isNaN(parsedTotal)) input.totalAmount = parsedTotal
       if (developer.trim()) input.developer = developer.trim()
@@ -92,7 +94,7 @@ export function AddPaymentProjectModal({ importableProjects, onCreate, onImport,
     } finally {
       setSaving(false)
     }
-  }, [name, selectedColor, totalAmount, developer, onCreate, onClose])
+  }, [name, selectedColor, totalAmount, developer, currency, onCreate, onClose])
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -240,19 +242,33 @@ export function AddPaymentProjectModal({ importableProjects, onCreate, onImport,
                   style={inputStyle}
                 />
               </div>
-              <div style={{ flex: 1 }}>
-                <label htmlFor="pp-dev-input" style={labelStyle}>
-                  Developer <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>(optional)</span>
-                </label>
-                <input
-                  id="pp-dev-input"
-                  type="text"
-                  value={developer}
-                  onChange={(e) => setDeveloper(e.target.value)}
-                  placeholder="Assigned to..."
-                  style={inputStyle}
-                />
+              <div style={{ flex: '0 0 100px' }}>
+                <label htmlFor="pp-currency-input" style={labelStyle}>Currency</label>
+                <select
+                  id="pp-currency-input"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
+                    <option key={code} value={code}>{code}</option>
+                  ))}
+                </select>
               </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label htmlFor="pp-dev-input" style={labelStyle}>
+                Developer <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>(optional)</span>
+              </label>
+              <input
+                id="pp-dev-input"
+                type="text"
+                value={developer}
+                onChange={(e) => setDeveloper(e.target.value)}
+                placeholder="Assigned to..."
+                style={inputStyle}
+              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>

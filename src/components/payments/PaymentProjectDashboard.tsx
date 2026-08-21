@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import type { PaymentProject, PaymentMilestone, PaymentRecord } from '@shared/types'
 import { usePaymentStore } from '@/lib/store/paymentStore'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
+import { CURRENCIES, formatCurrency, isCurrencyCode, type CurrencyCode } from '@/lib/currency'
 
 const PRESET_COLORS = [
   '#E879B9', '#A78BFA', '#34D399', '#60A5FA',
@@ -109,6 +110,9 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
   const [colorDraft, setColorDraft] = useState(paymentProject.color)
   const [totalDraft, setTotalDraft] = useState(String(paymentProject.totalAmount))
   const [developerDraft, setDeveloperDraft] = useState(paymentProject.developer ?? '')
+  const [currencyDraft, setCurrencyDraft] = useState<CurrencyCode>(
+    isCurrencyCode(paymentProject.currency) ? paymentProject.currency : 'USD'
+  )
   const [savingHeader, setSavingHeader] = useState(false)
 
   const [showAddMilestone, setShowAddMilestone] = useState(false)
@@ -145,6 +149,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
     setColorDraft(paymentProject.color)
     setTotalDraft(String(paymentProject.totalAmount))
     setDeveloperDraft(paymentProject.developer ?? '')
+    setCurrencyDraft(isCurrencyCode(paymentProject.currency) ? paymentProject.currency : 'USD')
     setEditingHeader(true)
   }, [paymentProject])
 
@@ -159,12 +164,13 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
         color: colorDraft,
         totalAmount: isNaN(parsedTotal) ? 0 : parsedTotal,
         developer: developerDraft.trim() || null,
+        currency: currencyDraft,
       })
       setEditingHeader(false)
     } finally {
       setSavingHeader(false)
     }
-  }, [nameDraft, colorDraft, totalDraft, developerDraft, updatePaymentProject, paymentProject.id])
+  }, [nameDraft, colorDraft, totalDraft, developerDraft, currencyDraft, updatePaymentProject, paymentProject.id])
 
   const handleAddMilestone = useCallback(async () => {
     const trimmedTitle = milestoneTitle.trim()
@@ -273,6 +279,18 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                     <label style={formLabelStyle}>Total Amount</label>
                     <input type="number" min="0" step="0.01" value={totalDraft} onChange={(e) => setTotalDraft(e.target.value)} style={formInputStyle} />
                   </div>
+                  <div style={{ flex: '0 0 90px' }}>
+                    <label style={formLabelStyle}>Currency</label>
+                    <select
+                      value={currencyDraft}
+                      onChange={(e) => setCurrencyDraft(e.target.value as CurrencyCode)}
+                      style={{ ...formInputStyle, cursor: 'pointer' }}
+                    >
+                      {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
+                        <option key={code} value={code}>{code}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div style={{ flex: 1 }}>
                     <label style={formLabelStyle}>Developer</label>
                     <input value={developerDraft} onChange={(e) => setDeveloperDraft(e.target.value)} style={formInputStyle} />
@@ -308,17 +326,17 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                 </p>
 
                 <div style={{ display: 'flex', gap: 28 }}>
-                  <StatDisplay label="Total" value={paymentProject.totalAmount} />
-                  <StatDisplay label="Paid" value={paid} accent />
-                  <StatDisplay label="Remaining" value={remaining} />
-                  <StatDisplay label="Milestones" value={undefined} display={`${milestonesCleared} / ${milestones.length}`} />
+                  <StatDisplay label="Total" value={paymentProject.totalAmount} currency={paymentProject.currency} />
+                  <StatDisplay label="Paid" value={paid} currency={paymentProject.currency} accent />
+                  <StatDisplay label="Remaining" value={remaining} currency={paymentProject.currency} />
+                  <StatDisplay label="Milestones" value={undefined} currency={paymentProject.currency} display={`${milestonesCleared} / ${milestones.length}`} />
                 </div>
               </>
             )}
           </div>
 
           <div style={{ flex: '0 0 auto' }}>
-            <PaymentDonut paid={paid} remaining={Math.max(remaining, 0)} />
+            <PaymentDonut paid={paid} remaining={Math.max(remaining, 0)} currency={paymentProject.currency} />
           </div>
         </div>
 
@@ -380,6 +398,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                   <MilestoneRow
                     key={m.id}
                     milestone={m}
+                    currency={paymentProject.currency}
                     onTogglePaid={() => togglePaymentMilestonePaid(m.id)}
                     onEdit={() => startEditMilestone(m)}
                     onDelete={() => setPendingDelete({ kind: 'milestone', id: m.id })}
@@ -421,6 +440,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                   <PaymentRecordRow
                     key={r.id}
                     record={r}
+                    currency={paymentProject.currency}
                     milestoneTitle={milestone?.title}
                     onDelete={r.milestoneId ? undefined : () => setPendingDelete({ kind: 'record', id: r.id })}
                   />
@@ -447,23 +467,24 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
   )
 }
 
-function StatDisplay({ label, value, accent, display }: { label: string; value?: number; accent?: boolean; display?: string }) {
+function StatDisplay({ label, value, currency, accent, display }: { label: string; value?: number; currency: string; accent?: boolean; display?: string }) {
   return (
     <div>
       <p style={{ margin: '0 0 2px', fontSize: 10, fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </p>
       <p style={{ margin: 0, fontSize: 18, fontWeight: 600, color: accent ? 'var(--accent)' : 'var(--text-primary)' }}>
-        {display ?? `$${(value ?? 0).toLocaleString()}`}
+        {display ?? formatCurrency(currency, value ?? 0)}
       </p>
     </div>
   )
 }
 
 function MilestoneRow({
-  milestone, onTogglePaid, onEdit, onDelete,
+  milestone, currency, onTogglePaid, onEdit, onDelete,
 }: {
   milestone: PaymentMilestone
+  currency: string
   onTogglePaid: () => void
   onEdit: () => void
   onDelete: () => void
@@ -484,7 +505,7 @@ function MilestoneRow({
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', textDecoration: milestone.paid ? 'line-through' : 'none' }}>
-          {milestone.title} &middot; ${milestone.amount.toLocaleString()}
+          {milestone.title} &middot; {formatCurrency(currency, milestone.amount)}
         </p>
         {milestone.description && (
           <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-tertiary)' }}>{milestone.description}</p>
@@ -499,9 +520,10 @@ function MilestoneRow({
 }
 
 function PaymentRecordRow({
-  record, milestoneTitle, onDelete,
+  record, currency, milestoneTitle, onDelete,
 }: {
   record: PaymentRecord
+  currency: string
   milestoneTitle?: string
   onDelete?: () => void
 }) {
@@ -509,7 +531,7 @@ function PaymentRecordRow({
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)' }}>
-          ${record.amount.toLocaleString()}
+          {formatCurrency(currency, record.amount)}
           {milestoneTitle ? ` — ${milestoneTitle}` : record.note ? ` — ${record.note}` : ''}
         </p>
         <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-tertiary)' }}>
@@ -525,7 +547,7 @@ function PaymentRecordRow({
 
 // ─── Donut chart: Paid vs Remaining ──────────────────────────────────────────
 
-function PaymentDonut({ paid, remaining }: { paid: number; remaining: number }) {
+function PaymentDonut({ paid, remaining, currency }: { paid: number; remaining: number; currency: string }) {
   const total = paid + remaining
   const size = 132
   const strokeWidth = 16
@@ -576,19 +598,19 @@ function PaymentDonut({ paid, remaining }: { paid: number; remaining: number }) 
       </div>
 
       <div style={{ display: 'flex', gap: 14 }}>
-        <LegendItem color="var(--accent)" label="Paid" value={paid} />
-        <LegendItem color="var(--text-tertiary)" label="Remaining" value={remaining} />
+        <LegendItem color="var(--accent)" label="Paid" value={paid} currency={currency} />
+        <LegendItem color="var(--text-tertiary)" label="Remaining" value={remaining} currency={currency} />
       </div>
     </div>
   )
 }
 
-function LegendItem({ color, label, value }: { color: string; label: string; value: number }) {
+function LegendItem({ color, label, value, currency }: { color: string; label: string; value: number; currency: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
       <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-        {label} <strong style={{ color: 'var(--text-primary)' }}>${value.toLocaleString()}</strong>
+        {label} <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(currency, value)}</strong>
       </span>
     </div>
   )

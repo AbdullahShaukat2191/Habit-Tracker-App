@@ -1,7 +1,7 @@
 'use client'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getDaysInMonth } from 'date-fns'
+import { getDaysInMonth, format } from 'date-fns'
 import {
   DndContext,
   DragEndEvent,
@@ -92,9 +92,9 @@ export function HabitGrid({
         .reduce(
           (acc, habit) => {
             const completedSet = buildCompletionSet(completions, habit.id)
-            const { completed } = computeScore(habit.schedule, completedSet, currentMonth)
+            const { completed } = computeScore(habit.schedule, completedSet, currentMonth, habit.createdAt)
             // Use full-month applicable days (not capped at today) for the denominator
-            const applicable = getApplicableDays(habit.schedule, currentMonth)
+            const applicable = getApplicableDays(habit.schedule, currentMonth, habit.createdAt)
             acc.completed += completed
             acc.applicable += applicable
             return acc
@@ -127,7 +127,11 @@ export function HabitGrid({
       const dateStr = `${currentMonth}-${String(d).padStart(2, '0')}`
       if (dateStr > today) continue
       const applicable = habits.filter(
-        (h) => h.archivedAt === null && !h.isOptional && isApplicableDay(h.schedule, dateStr)
+        (h) =>
+          h.archivedAt === null &&
+          !h.isOptional &&
+          dateStr >= format(new Date(h.createdAt), 'yyyy-MM-dd') &&
+          isApplicableDay(h.schedule, dateStr)
       )
       if (applicable.length === 0) continue
       if (applicable.every((h) => completionsByHabit.get(h.id)?.has(dateStr))) {
@@ -156,8 +160,8 @@ export function HabitGrid({
       .filter((h) => h.archivedAt === null)
       .map((habit) => {
         const completedSet = buildCompletionSet(completions, habit.id)
-        const { completed } = computeScore(habit.schedule, completedSet, currentMonth)
-        const applicable = getApplicableDays(habit.schedule, currentMonth)
+        const { completed } = computeScore(habit.schedule, completedSet, currentMonth, habit.createdAt)
+        const applicable = getApplicableDays(habit.schedule, currentMonth, habit.createdAt)
         const pct = applicable > 0 ? completed / applicable : 0
         return { id: habit.id, name: habit.name, completed, applicable, pct }
       })

@@ -18,7 +18,7 @@ import type {
   CreateFinanceCategoryInput, UpdateFinanceCategoryInput,
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
-  SettingsMap, ToggleResult,
+  SettingsMap, ToggleResult, QuoteAssignments,
 } from '../../shared/types'
 
 function api() {
@@ -78,7 +78,9 @@ export const deletePaymentRecord = (id: string): Promise<void> => api().deletePa
 export const listGoals = (): Promise<Goal[]> => api().listGoals()
 export const createGoal = (input: CreateGoalInput): Promise<Goal> => api().createGoal(input)
 export const updateGoal = (id: string, input: UpdateGoalInput): Promise<Goal> => api().updateGoal(id, input)
+export const reorderGoals = (ids: string[]): Promise<void> => api().reorderGoals(ids)
 export const completeGoal = (id: string): Promise<Goal> => api().completeGoal(id)
+export const uncompleteGoal = (id: string): Promise<Goal> => api().uncompleteGoal(id)
 export const deleteGoal = (id: string): Promise<void> => api().deleteGoal(id)
 
 // Settings
@@ -96,6 +98,9 @@ export const createQuote = (input: CreateQuoteInput): Promise<Quote> => api().cr
 export const updateQuote = (id: string, input: UpdateQuoteInput): Promise<Quote> => api().updateQuote(id, input)
 export const deleteQuote = (id: string): Promise<void> => api().deleteQuote(id)
 export const toggleQuoteHidden = (id: string): Promise<void> => api().toggleQuoteHidden(id)
+export const getAllQuoteAssignments = (): Promise<QuoteAssignments> => api().getAllQuoteAssignments()
+export const setQuoteAssignment = (pageId: string, tabId: string, quoteId: string): Promise<void> =>
+  api().setQuoteAssignment(pageId, tabId, quoteId)
 
 // App
 export const getAppVersion = (): Promise<string> => api().getAppVersion()
@@ -121,10 +126,18 @@ export const removeNavigateListener = () => api().removeNavigateListener()
 export const onReportReady = (cb: (month: string) => void) => api().onReportReady(cb)
 export const removeReportReadyListener = () => api().removeReportReadyListener()
 
+// Zoom
+export const zoomIn = (): Promise<void> => api().zoomIn()
+export const zoomOut = (): Promise<void> => api().zoomOut()
+export const zoomReset = (): Promise<void> => api().zoomReset()
+export const onZoomChanged = (cb: (percent: number) => void) => api().onZoomChanged(cb)
+export const removeZoomChangedListener = () => api().removeZoomChangedListener()
+
 // Wishlist
 export const listWishlistItems = (): Promise<WishlistItem[]> => api().listWishlistItems()
 export const createWishlistItem = (input: CreateWishlistInput): Promise<WishlistItem> => api().createWishlistItem(input)
 export const updateWishlistItem = (id: string, input: UpdateWishlistInput): Promise<WishlistItem> => api().updateWishlistItem(id, input)
+export const reorderWishlistItems = (ids: string[]): Promise<void> => api().reorderWishlistItems(ids)
 export const completeWishlistItem = (id: string): Promise<WishlistItem> => api().completeWishlistItem(id)
 export const uncompleteWishlistItem = (id: string): Promise<WishlistItem> => api().uncompleteWishlistItem(id)
 export const deleteWishlistItem = (id: string): Promise<void> => api().deleteWishlistItem(id)

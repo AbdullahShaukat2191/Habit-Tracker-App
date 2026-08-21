@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, protocol, net } from 'electron'
+import { app, BrowserWindow, globalShortcut, protocol, net, shell } from 'electron'
 import { pathToFileURL } from 'url'
 
 let isQuitting = false
@@ -8,6 +8,7 @@ import { registerAllHandlers } from './ipc/handlers'
 import { createTray, destroyTray } from './tray'
 import { startNotificationScheduler, stopNotificationScheduler } from './notifications'
 import { syncAutoLaunch } from './autoLaunch'
+import { initZoom, zoomIn, zoomOut, zoomReset } from './zoom'
 import { getSetting } from './db/queries/settings'
 import { getReport, generateReport } from './db/queries/reports'
 import { format, subMonths } from 'date-fns'
@@ -29,6 +30,10 @@ if (!gotLock) {
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { secure: true, standard: true, supportFetchAPI: true } },
 ])
+
+// Required on Windows for Notification.show() to actually display a toast —
+// without a matching AppUserModelID, Windows silently drops notifications.
+app.setAppUserModelId('com.habittracker.app')
 
 let mainWindow: BrowserWindow | null = null
 
@@ -52,6 +57,28 @@ function createWindow() {
   const url = isDev ? 'http://localhost:3000' : 'app://localhost/'
 
   mainWindow.loadURL(url)
+  initZoom(mainWindow)
+
+  // Electron's implicit default menu binds zoom to "CommandOrControl+Plus/-/0", but on
+  // Windows/Linux the zoom-in accelerator never actually fires — Shift is required to
+  // type "+" and Electron's matcher doesn't reconcile that (see electron/electron#40674,
+  // #11752). We take over all three explicitly (not just zoom-in) so behavior is
+  // consistent and so the renderer can be notified of every zoom change (for the zoom
+  // indicator popup) — the implicit menu has no way to signal that.
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    if (!(input.control || input.meta)) return
+    if (input.key === '=' || input.key === '+') {
+      event.preventDefault()
+      zoomIn()
+    } else if (input.key === '-') {
+      event.preventDefault()
+      zoomOut()
+    } else if (input.key === '0') {
+      event.preventDefault()
+      zoomReset()
+    }
+  })
 
   // Show window when ready (avoids white flash)
   mainWindow.once('ready-to-show', () => {
@@ -60,6 +87,13 @@ function createWindow() {
       mainWindow!.show()
       mainWindow!.focus()
     }
+  })
+
+  // Any target="_blank" / window.open link (e.g. quote source links) opens
+  // in the OS default browser instead of silently doing nothing.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url)
+    return { action: 'deny' }
   })
 
   mainWindow.on('maximize', () => {
@@ -105,7 +139,7 @@ async function checkAndGenerateMonthlyReport() {
       return
     }
     try {
-      const apiKey = getSetting('claude_api_key') ?? ''
+      const apiKey = getSetting(SETTING_KEYS.OPENAI_API_KEY) ?? ''
       const report = await generateReport(lastMonth, apiKey)
       // Notify renderer if it's ready
       if (mainWindow && !mainWindow.isDestroyed()) {

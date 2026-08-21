@@ -16,6 +16,7 @@ function rowToPaymentProject(row: typeof paymentProjects.$inferSelect): PaymentP
     color: row.color,
     totalAmount: row.totalAmount,
     developer: row.developer,
+    currency: row.currency,
     createdAt: row.createdAt,
   }
 }
@@ -62,6 +63,7 @@ export function createPaymentProject(input: CreatePaymentProjectInput): PaymentP
     color: input.color,
     totalAmount: input.totalAmount ?? 0,
     developer: input.developer ?? null,
+    currency: input.currency ?? 'USD',
     createdAt: Date.now(),
   }
   db.insert(paymentProjects).values(row).run()
@@ -82,6 +84,7 @@ export function importPaymentProjects(projectIds: string[]): PaymentProject[] {
       color: source.color,
       totalAmount: 0,
       developer: null,
+      currency: 'USD',
       createdAt: now,
     }
     db.insert(paymentProjects).values(row).run()
@@ -97,6 +100,7 @@ export function updatePaymentProject(id: string, input: UpdatePaymentProjectInpu
   if (input.color !== undefined) updates.color = input.color
   if (input.totalAmount !== undefined) updates.totalAmount = input.totalAmount
   if (input.developer !== undefined) updates.developer = input.developer
+  if (input.currency !== undefined) updates.currency = input.currency
   db.update(paymentProjects).set(updates).where(eq(paymentProjects.id, id)).run()
   return rowToPaymentProject(db.select().from(paymentProjects).where(eq(paymentProjects.id, id)).get()!)
 }

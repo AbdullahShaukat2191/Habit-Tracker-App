@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import type { FinanceCategory, FinanceTransaction, CreateFinanceTransactionInput } from '@shared/types'
 import { useFinanceStore } from '@/lib/store/financeStore'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
+import { getCurrencySymbol } from '@/lib/currency'
 import { format } from 'date-fns'
 
 const PRESET_COLORS = [
@@ -42,6 +45,7 @@ const labelStyle: React.CSSProperties = {
 
 export function TransactionModal({ mode, transaction, categories, onClose }: TransactionModalProps) {
   const { createTransaction, updateTransaction, createCategory } = useFinanceStore()
+  const currency = useSettingsStore((s) => s.get(SETTING_KEYS.FINANCE_CURRENCY))
 
   const [title, setTitle] = useState(transaction?.title ?? '')
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
@@ -157,7 +161,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
 
         <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
           <div style={{ flex: 1 }}>
-            <label htmlFor="tx-amount-input" style={labelStyle}>Amount (Rs.)</label>
+            <label htmlFor="tx-amount-input" style={labelStyle}>Amount ({getCurrencySymbol(currency)})</label>
             <input
               id="tx-amount-input"
               ref={amountInputRef}

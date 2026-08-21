@@ -1,16 +1,14 @@
 'use client'
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Eye, EyeOff, Pencil, Trash2 } from 'lucide-react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { Eye, EyeOff, List } from 'lucide-react'
 import { useSettingsStore } from '@/lib/store/settingsStore'
 import { useToastStore } from '@/lib/store/toastStore'
 import { SETTING_KEYS } from '@shared/types'
 import type { Quote } from '@shared/types'
+import { QuotesViewerModal } from '@/components/settings/QuotesViewerModal'
 import {
   listQuotes,
   createQuote,
-  updateQuote,
-  deleteQuote,
-  toggleQuoteHidden,
   testNotification,
   exportData,
   getAppVersion,
@@ -287,17 +285,14 @@ export default function SettingsPage() {
   const showToast = useToastStore((s) => s.show)
 
   const [quotes, setQuotes] = useState<Quote[]>([])
-  const [quotesTab, setQuotesTab] = useState<'Goggins' | 'Hormozi'>('Goggins')
   const [newQuoteText, setNewQuoteText] = useState('')
-  const [newQuoteSource, setNewQuoteSource] = useState('')
+  const [newQuoteAuthor, setNewQuoteAuthor] = useState('')
   const [addingQuote, setAddingQuote] = useState(false)
   const [appVersion, setAppVersion] = useState('')
   const [dbPath, setDbPath] = useState('')
   const [apiKeyInput, setApiKeyInput] = useState('')
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
-  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
-  const [editText, setEditText] = useState('')
-  const [editSource, setEditSource] = useState('')
+  const [showQuotesViewer, setShowQuotesViewer] = useState(false)
 
   // Notification active hours local state
   const [activeStart, setActiveStart] = useState('08:00')
@@ -342,79 +337,25 @@ export default function SettingsPage() {
 
   // ── Quotes ──────────────────────────────────────────────────────────────────
 
-  const visibleQuotes = useMemo(
-    () => quotes.filter((q) => q.author === quotesTab),
-    [quotes, quotesTab]
-  )
-
   const handleAddQuote = useCallback(async () => {
-    if (!newQuoteText.trim()) return
+    if (!newQuoteText.trim() || !newQuoteAuthor.trim()) return
     setAddingQuote(true)
     try {
       await createQuote({
-        author: quotesTab,
+        author: newQuoteAuthor.trim(),
         text: newQuoteText.trim(),
-        source: newQuoteSource.trim() || 'User added',
       })
       const updated = await listQuotes()
       setQuotes(updated)
       setNewQuoteText('')
-      setNewQuoteSource('')
+      setNewQuoteAuthor('')
       showToast('Quote added!', 'success')
     } catch (err) {
       showToast(String(err), 'error')
     } finally {
       setAddingQuote(false)
     }
-  }, [newQuoteText, newQuoteSource, quotesTab, showToast])
-
-  const handleToggleHidden = useCallback(
-    async (id: string) => {
-      try {
-        await toggleQuoteHidden(id)
-        const updated = await listQuotes()
-        setQuotes(updated)
-      } catch (err) {
-        showToast(String(err), 'error')
-      }
-    },
-    [showToast]
-  )
-
-  const handleDeleteQuote = useCallback(
-    async (id: string) => {
-      try {
-        await deleteQuote(id)
-        const updated = await listQuotes()
-        setQuotes(updated)
-        showToast('Quote deleted', 'info')
-      } catch (err) {
-        showToast(String(err), 'error')
-      }
-    },
-    [showToast]
-  )
-
-  const startEditQuote = useCallback((q: Quote) => {
-    setEditingQuoteId(q.id)
-    setEditText(q.text)
-    setEditSource(q.source)
-  }, [])
-
-  const handleSaveEditQuote = useCallback(
-    async (id: string) => {
-      try {
-        await updateQuote(id, { text: editText.trim(), source: editSource.trim() })
-        const updated = await listQuotes()
-        setQuotes(updated)
-        setEditingQuoteId(null)
-        showToast('Quote updated', 'success')
-      } catch (err) {
-        showToast(String(err), 'error')
-      }
-    },
-    [editText, editSource, showToast]
-  )
+  }, [newQuoteText, newQuoteAuthor, showToast])
 
   // ── API Key ─────────────────────────────────────────────────────────────────
 
@@ -723,146 +664,20 @@ export default function SettingsPage() {
 
         {/* ── Section 3: Quotes ───────────────────────────────────────────── */}
         <section>
-          <h3 style={sectionHeadingStyle}>Quotes</h3>
-
-          {/* Tab selector */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            {(['Goggins', 'Hormozi'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setQuotesTab(tab)}
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: 20,
-                  border: '1px solid var(--border-subtle)',
-                  backgroundColor:
-                    quotesTab === tab ? 'var(--accent)' : 'transparent',
-                  color: quotesTab === tab ? 'white' : 'var(--text-secondary)',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'background-color 150ms',
-                }}
-              >
-                {tab}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 style={sectionHeadingStyle}>Quotes</h3>
+            <button onClick={() => setShowQuotesViewer(true)} style={ghostButtonStyle}>
+              <List size={14} /> View All Quotes
+            </button>
           </div>
 
-          {/* Quote list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {visibleQuotes.map((q) => {
-              if (editingQuoteId === q.id && !q.bundled) {
-                return (
-                  <div
-                    key={q.id}
-                    style={{
-                      padding: 12,
-                      backgroundColor: 'var(--bg-surface)',
-                      borderRadius: 8,
-                      border: '1px solid var(--accent)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 8,
-                    }}
-                  >
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      style={{ ...inputStyle, minHeight: 72, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
-                    />
-                    <input
-                      value={editSource}
-                      onChange={(e) => setEditSource(e.target.value)}
-                      placeholder="Source"
-                      style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
-                    />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => handleSaveEditQuote(q.id)}
-                        style={primaryButtonStyle}
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingQuoteId(null)}
-                        style={ghostButtonStyle}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )
-              }
-
-              return (
-                <div
-                  key={q.id}
-                  style={{
-                    padding: '10px 14px',
-                    backgroundColor: 'var(--bg-surface)',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                    opacity: q.hidden ? 0.45 : 1,
-                    transition: 'opacity 150ms',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                      {q.text}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                      {q.source}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    {q.bundled ? (
-                      // Eye toggle for bundled quotes
-                      <button
-                        onClick={() => handleToggleHidden(q.id)}
-                        title={q.hidden ? 'Show quote' : 'Hide quote'}
-                        style={{
-                          ...ghostButtonStyle,
-                          padding: '4px 8px',
-                        }}
-                      >
-                        {q.hidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                      </button>
-                    ) : (
-                      // Edit + Delete for custom quotes
-                      <>
-                        <button
-                          onClick={() => startEditQuote(q)}
-                          title="Edit quote"
-                          style={{
-                            ...ghostButtonStyle,
-                            padding: '4px 8px',
-                          }}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteQuote(q.id)}
-                          title="Delete quote"
-                          style={{
-                            ...ghostButtonStyle,
-                            padding: '4px 8px',
-                            color: '#F87171',
-                            borderColor: '#7F1D1D',
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          {showQuotesViewer && (
+            <QuotesViewerModal
+              quotes={quotes}
+              onClose={() => setShowQuotesViewer(false)}
+              onQuotesChanged={setQuotes}
+            />
+          )}
 
           {/* Add new quote */}
           <div
@@ -875,7 +690,7 @@ export default function SettingsPage() {
             }}
           >
             <textarea
-              placeholder={`New ${quotesTab} quote...`}
+              placeholder="New quote..."
               value={newQuoteText}
               onChange={(e) => setNewQuoteText(e.target.value)}
               style={{
@@ -887,15 +702,19 @@ export default function SettingsPage() {
               }}
             />
             <input
-              placeholder="Source (e.g. Can't Hurt Me, Ch. 4)"
-              value={newQuoteSource}
-              onChange={(e) => setNewQuoteSource(e.target.value)}
+              placeholder="Author (e.g. David Goggins)"
+              value={newQuoteAuthor}
+              onChange={(e) => setNewQuoteAuthor(e.target.value)}
               style={{ ...inputStyle, marginTop: 8, width: '100%', boxSizing: 'border-box' }}
             />
             <button
               onClick={handleAddQuote}
-              disabled={addingQuote || !newQuoteText.trim()}
-              style={{ ...primaryButtonStyle, marginTop: 8, opacity: addingQuote || !newQuoteText.trim() ? 0.5 : 1 }}
+              disabled={addingQuote || !newQuoteText.trim() || !newQuoteAuthor.trim()}
+              style={{
+                ...primaryButtonStyle,
+                marginTop: 8,
+                opacity: addingQuote || !newQuoteText.trim() || !newQuoteAuthor.trim() ? 0.5 : 1,
+              }}
             >
               {addingQuote ? 'Adding...' : 'Add Quote'}
             </button>

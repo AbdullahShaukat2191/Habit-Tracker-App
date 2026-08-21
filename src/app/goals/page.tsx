@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import type { Goal, Quote } from '@shared/types'
@@ -8,6 +8,7 @@ import { listQuotes } from '@/lib/ipc'
 import GoalCard from '@/components/goals/GoalCard'
 import { GoalModal } from '@/components/goals/GoalModal'
 import { GoalCompletedDialog } from '@/components/goals/GoalCompletedDialog'
+import { PageQuote } from '@/components/layout/PageQuote'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -24,10 +25,8 @@ export default function GoalsPage() {
   const [showCompletedDialog, setShowCompletedDialog] = useState(false)
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [emptyStateQuote, setEmptyStateQuote] = useState<Quote | null>(null)
-  const [goalOrder, setGoalOrder] = useState<string[] | null>(null)
-  const activeGoalsRef = useRef<Goal[]>([])
 
-  const { goals, loadGoals, createGoal, updateGoal, completeGoal, deleteGoal } = useGoalStore()
+  const { goals, loadGoals, createGoal, updateGoal, reorderGoals, completeGoal, uncompleteGoal, deleteGoal } = useGoalStore()
 
   useEffect(() => {
     loadGoals()
@@ -49,30 +48,20 @@ export default function GoalsPage() {
   }, [])
 
   const activeGoals = useMemo(
-    () =>
-      goals
-        .filter((g) => g.completedAt === null && g.archivedAt === null)
-        .sort((a, b) => a.createdAt - b.createdAt),
+    () => goals.filter((g) => g.completedAt === null && g.archivedAt === null),
     [goals]
   )
 
-  useEffect(() => { activeGoalsRef.current = activeGoals }, [activeGoals])
-
-  const orderedActiveGoals = useMemo(() => {
-    if (goalOrder === null) return activeGoals
-    const orderMap = new Map(goalOrder.map((id, i) => [id, i]))
-    return [...activeGoals].sort((a, b) => (orderMap.get(a.id) ?? 999999) - (orderMap.get(b.id) ?? 999999))
-  }, [activeGoals, goalOrder])
-
-  const handleGoalDragEnd = useCallback((activeId: string, overId: string) => {
-    setGoalOrder((prev) => {
-      const base = prev ?? activeGoalsRef.current.map((g) => g.id)
-      const oldIdx = base.indexOf(activeId)
-      const newIdx = base.indexOf(overId)
-      if (oldIdx === -1 || newIdx === -1) return prev
-      return arrayMove(base, oldIdx, newIdx)
-    })
-  }, [])
+  const handleGoalDragEnd = useCallback(
+    (activeId: string, overId: string) => {
+      const oldIndex = activeGoals.findIndex((g) => g.id === activeId)
+      const newIndex = activeGoals.findIndex((g) => g.id === overId)
+      if (oldIndex === -1 || newIndex === -1) return
+      const newOrder = arrayMove(activeGoals, oldIndex, newIndex)
+      reorderGoals(newOrder.map((g) => g.id))
+    },
+    [activeGoals, reorderGoals]
+  )
 
   const completedGoals = useMemo(
     () =>
@@ -90,6 +79,13 @@ export default function GoalsPage() {
       setShowCompletedDialog(true)
     },
     [completeGoal, quotes]
+  )
+
+  const handleUncomplete = useCallback(
+    async (id: string) => {
+      await uncompleteGoal(id)
+    },
+    [uncompleteGoal]
   )
 
   const handleDelete = useCallback(
@@ -179,9 +175,7 @@ export default function GoalsPage() {
             + Add Goal
           </button>
         </div>
-        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-          &ldquo;You are in danger of living a life so comfortable and soft, that you will die without ever realizing your true potential.&rdquo; — David Goggins
-        </p>
+        <PageQuote pageId="goals" />
 
         <div style={{ display: 'flex', gap: 4 }}>
           {(['active', 'completed'] as const).map((tab) => (
@@ -213,7 +207,7 @@ export default function GoalsPage() {
             <EmptyState quote={emptyStateQuote} onAdd={() => setModalState({ type: 'add' })} />
           ) : (
             <SortableGoalList
-              goals={orderedActiveGoals}
+              goals={activeGoals}
               onComplete={handleComplete}
               onDelete={handleDelete}
               onEdit={handleEdit}
@@ -242,6 +236,7 @@ export default function GoalsPage() {
                   key={g.id}
                   goal={g}
                   onComplete={handleComplete}
+                  onUncomplete={handleUncomplete}
                   onDelete={handleDelete}
                   onEdit={handleEdit}
                 />

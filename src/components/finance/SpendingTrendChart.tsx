@@ -1,6 +1,9 @@
 'use client'
 import React, { useState, useMemo } from 'react'
 import { format } from 'date-fns'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface SpendingTrendChartProps {
   data: Array<{ month: string; total: number }>
@@ -11,6 +14,7 @@ const HEIGHT = 180
 const PADDING = { top: 12, right: 12, bottom: 24, left: 48 }
 
 export function SpendingTrendChart({ data }: SpendingTrendChartProps) {
+  const currency = useSettingsStore((s) => s.get(SETTING_KEYS.FINANCE_CURRENCY))
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   const plotWidth = WIDTH - PADDING.left - PADDING.right
@@ -89,7 +93,7 @@ export function SpendingTrendChart({ data }: SpendingTrendChartProps) {
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           }}
         >
-          <strong style={{ color: 'var(--text-primary)' }}>Rs. {hovered.total.toLocaleString()}</strong>{' '}
+          <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(currency, hovered.total)}</strong>{' '}
           <span style={{ color: 'var(--text-secondary)' }}>{format(new Date(hovered.month + '-01T12:00:00'), 'MMMM yyyy')}</span>
         </div>
       )}

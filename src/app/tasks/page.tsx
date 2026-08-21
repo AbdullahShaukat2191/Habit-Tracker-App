@@ -14,6 +14,7 @@ import TaskCard from '@/components/tasks/TaskCard'
 import { AddTaskModal } from '@/components/tasks/AddTaskModal'
 import { AllTasksDoneDialog } from '@/components/tasks/AllTasksDoneDialog'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
+import { PageQuote } from '@/components/layout/PageQuote'
 
 function buildGroupLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00')
@@ -258,6 +259,8 @@ export default function TasksPage() {
           </button>
         </div>
 
+        <PageQuote pageId="tasks" tabId={activeTab} />
+
         {/* Tabs + sort/group controls */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -344,15 +347,6 @@ export default function TasksPage() {
             </div>
           )}
         </div>
-
-        {/* Tab quote */}
-        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic', margin: '4px 0 0', paddingBottom: 10 }}>
-          {activeTab === 'today'
-            ? '“The single greatest ‘hack’ is doing the thing you said you were going to do.” — Alex Hormozi'
-            : activeTab === 'completed'
-            ? '“When your mind is telling you that you’re done, you’re only at 40%.” — David Goggins'
-            : '“Most people are not working hard at the right things.” — Alex Hormozi'}
-        </p>
       </div>
 
       {/* Content */}

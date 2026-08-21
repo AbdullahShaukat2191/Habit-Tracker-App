@@ -1,4 +1,4 @@
-import { computeScore, computeStreak, isApplicableDay, missedYesterday } from '../../../../shared/habitLogic'
+import { computeScore, computeStreak, isApplicableDay, missedYesterday, getApplicableDays } from '../../../../shared/habitLogic'
 import { format, addDays, subDays } from 'date-fns'
 
 // Pin "today" via a stable date in tests where needed
@@ -121,6 +121,68 @@ describe('computeStreak', () => {
     }
 
     const streak = computeStreak(['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], completed)
+    expect(streak).toBe(5)
+  })
+})
+
+describe('createdAt boundary — habits should not count as missed before they existed', () => {
+  test('computeScore excludes days before createdAt from the applicable count', () => {
+    // Daily habit, but created May 15 — only May 15-31 (17 days) should be applicable
+    const daily = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+    const createdAt = new Date('2026-05-15T00:00:00').getTime()
+    const result = computeScore([...daily], new Set(), '2026-05', createdAt)
+    expect(result.applicable).toBe(17)
+    expect(result.completed).toBe(0)
+  })
+
+  test('computeScore with no createdAt behaves as before (back-compat)', () => {
+    const daily = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+    const result = computeScore([...daily], new Set(), '2026-05')
+    expect(result.applicable).toBe(31)
+  })
+
+  test('getApplicableDays excludes days before createdAt', () => {
+    const daily = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+    const createdAt = new Date('2026-05-15T00:00:00').getTime()
+    expect(getApplicableDays([...daily], '2026-05', createdAt)).toBe(17)
+  })
+
+  test('getApplicableDays with no createdAt behaves as before (back-compat)', () => {
+    const daily = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+    expect(getApplicableDays([...daily], '2026-05')).toBe(31)
+  })
+
+  test('a habit created mid-month is not penalized for days before it existed', () => {
+    // Habit created on the 15th, never completed since — without the fix this would
+    // report a low score dragged down by 14 "missed" days that predate the habit.
+    const daily = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+    const createdAt = new Date('2026-05-15T00:00:00').getTime()
+    const applicable = getApplicableDays([...daily], '2026-05', createdAt)
+    expect(applicable).toBe(17) // not 31 — the 14 days before creation don't count against it
+  })
+
+  test('computeStreak ignores completions recorded before createdAt (e.g. stale backfilled data)', () => {
+    // Habit "created" 2 days ago, but completedDates anomalously has entries reaching back
+    // 4 days (simulating a pre-existing backfilled completion from before the habit existed).
+    // The streak must not count those pre-creation days.
+    const daily = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+    const createdAt = subDays(new Date(), 2).getTime()
+    const completed = new Set<string>()
+    for (let i = 1; i <= 4; i++) {
+      completed.add(format(subDays(new Date(), i), 'yyyy-MM-dd'))
+    }
+    const streakWithoutGuard = computeStreak([...daily], completed)
+    const streakWithGuard = computeStreak([...daily], completed, createdAt)
+    expect(streakWithoutGuard).toBe(4) // pre-fix behavior: counts all 4, including pre-creation days
+    expect(streakWithGuard).toBe(2) // post-fix: stops at createdAt, only the 2 real days count
+  })
+
+  test('computeStreak with no createdAt behaves as before (back-compat)', () => {
+    const completed = new Set<string>()
+    for (let i = 1; i <= 5; i++) {
+      completed.add(format(subDays(new Date(), i), 'yyyy-MM-dd'))
+    }
+    const streak = computeStreak(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], completed)
     expect(streak).toBe(5)
   })
 })

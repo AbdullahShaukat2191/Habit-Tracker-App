@@ -5,6 +5,7 @@ import { useFinanceStore } from '@/lib/store/financeStore'
 import { TransactionModal } from '@/components/finance/TransactionModal'
 import { FinanceDashboard } from '@/components/finance/FinanceDashboard'
 import { FinanceSavingsTab } from '@/components/finance/FinanceSavingsTab'
+import { PageQuote } from '@/components/layout/PageQuote'
 
 export default function FinancePage() {
   const [innerTab, setInnerTab] = useState<'dashboard' | 'savings'>('dashboard')
@@ -29,6 +30,8 @@ export default function FinancePage() {
           )}
         </div>
 
+        <PageQuote pageId="finance" />
+
         <div style={{ display: 'flex', gap: 4 }}>
           {(['dashboard', 'savings'] as const).map((tab) => (
             <button
@@ -45,10 +48,6 @@ export default function FinancePage() {
             </button>
           ))}
         </div>
-
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic', paddingBottom: 10 }}>
-          Track what you spend, what you save, and what&apos;s left.
-        </p>
       </div>
 
       {innerTab === 'dashboard' ? <FinanceDashboard /> : <FinanceSavingsTab />}

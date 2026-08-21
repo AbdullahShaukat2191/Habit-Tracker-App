@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { Toast } from '@/components/ui/Toast'
 import { GlobalShortcuts } from '@/components/layout/GlobalShortcuts'
+import { ZoomIndicator } from '@/components/layout/ZoomIndicator'
 import { BootAnimation } from '@/components/ui/BootAnimation'
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <BootAnimation />
         <Toast />
         <GlobalShortcuts />
+        <ZoomIndicator />
       </body>
     </html>
   )

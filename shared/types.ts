@@ -39,6 +39,7 @@ export interface Goal {
   id: string
   title: string
   description: string | null
+  sortOrder: number
   createdAt: number
   completedAt: number | null
   archivedAt: number | null
@@ -48,6 +49,7 @@ export interface WishlistItem {
   id: string
   title: string
   description: string | null
+  sortOrder: number
   createdAt: number
   completedAt: number | null
   archivedAt: number | null
@@ -133,13 +135,16 @@ export interface MonthlyReport {
 
 export interface Quote {
   id: string
-  author: 'Goggins' | 'Hormozi'
+  author: string
   text: string
-  source: string
   bundled: boolean
   hidden: boolean
   addedAt: number
 }
+
+// Which quote is shown on a given page (+ optional tab, '' if the page has
+// only one page-wide quote). Keyed as `${pageId}:${tabId}` on the wire.
+export type QuoteAssignments = Record<string, string>
 
 // IPC payload types
 export interface CreateHabitInput {
@@ -186,6 +191,7 @@ export interface PaymentProject {
   color: string
   totalAmount: number
   developer: string | null
+  currency: string
   createdAt: number
 }
 
@@ -216,6 +222,7 @@ export interface CreatePaymentProjectInput {
   color: string
   totalAmount?: number
   developer?: string
+  currency?: string
 }
 
 export interface UpdatePaymentProjectInput {
@@ -223,6 +230,7 @@ export interface UpdatePaymentProjectInput {
   color?: string
   totalAmount?: number
   developer?: string | null
+  currency?: string
 }
 
 export interface CreatePaymentMilestoneInput {
@@ -253,14 +261,13 @@ export interface UpdateGoalInput {
 }
 
 export interface CreateQuoteInput {
-  author: 'Goggins' | 'Hormozi'
+  author: string
   text: string
-  source: string
 }
 
 export interface UpdateQuoteInput {
   text?: string
-  source?: string
+  author?: string
 }
 
 export type SettingsMap = Record<string, string>
@@ -277,6 +284,7 @@ export const SETTING_KEYS = {
   NOTIFY_ACTIVE_END: 'notify_active_end',     // 'HH:mm'
   NOTIFY_MIN_HOURS: 'notify_min_hours',
   NOTIFY_MAX_HOURS: 'notify_max_hours',
+  NOTIFY_NEXT_FIRE_AT: 'notify_next_fire_at', // epoch ms; persists the countdown across restarts
   LAUNCH_ON_STARTUP: 'launch_on_startup',
   START_MINIMIZED: 'start_minimized',
   CLOSE_TO_TRAY: 'close_to_tray',
@@ -291,4 +299,5 @@ export const SETTING_KEYS = {
   SHORTCUT_NAV_SETTINGS: 'shortcut_nav_settings',
   SHORTCUT_QUIT: 'shortcut_quit',
   MONTHLY_BUDGET: 'monthly_budget',
+  FINANCE_CURRENCY: 'finance_currency',
 } as const

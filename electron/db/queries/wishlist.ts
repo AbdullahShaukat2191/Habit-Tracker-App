@@ -9,6 +9,7 @@ function rowToItem(row: typeof wishlistItems.$inferSelect): WishlistItem {
     id: row.id,
     title: row.title,
     description: row.description ?? null,
+    sortOrder: row.sortOrder,
     createdAt: row.createdAt,
     completedAt: row.completedAt ?? null,
     archivedAt: row.archivedAt ?? null,
@@ -21,23 +22,35 @@ export function listWishlistItems(): WishlistItem[] {
     .select()
     .from(wishlistItems)
     .where(or(isNull(wishlistItems.archivedAt), isNotNull(wishlistItems.completedAt)))
-    .orderBy(asc(wishlistItems.createdAt))
+    .orderBy(asc(wishlistItems.sortOrder), asc(wishlistItems.createdAt))
     .all()
     .map(rowToItem)
 }
 
 export function createWishlistItem(input: CreateWishlistInput): WishlistItem {
   const db = getDb()
+  const existing = db.select({ sortOrder: wishlistItems.sortOrder }).from(wishlistItems).where(isNull(wishlistItems.archivedAt)).all()
+  const maxOrder = existing.reduce((max, i) => Math.max(max, i.sortOrder ?? 0), -1)
   const row = {
     id: randomUUID(),
     title: input.title,
     description: input.description ?? null,
+    sortOrder: maxOrder + 1,
     createdAt: Date.now(),
     completedAt: null,
     archivedAt: null,
   }
   db.insert(wishlistItems).values(row).run()
   return rowToItem(db.select().from(wishlistItems).where(eq(wishlistItems.id, row.id)).get()!)
+}
+
+export function reorderWishlistItems(ids: string[]): void {
+  const db = getDb()
+  db.transaction((tx) => {
+    ids.forEach((id, index) => {
+      tx.update(wishlistItems).set({ sortOrder: index }).where(eq(wishlistItems.id, id)).run()
+    })
+  })
 }
 
 export function updateWishlistItem(id: string, input: UpdateWishlistInput): WishlistItem {

@@ -11,11 +11,13 @@ interface GoalStore {
   loadGoals: () => Promise<void>
   createGoal: (input: CreateGoalInput) => Promise<Goal>
   updateGoal: (id: string, input: UpdateGoalInput) => Promise<void>
+  reorderGoals: (ids: string[]) => Promise<void>
   completeGoal: (id: string) => Promise<Goal>
+  uncompleteGoal: (id: string) => Promise<Goal>
   deleteGoal: (id: string) => Promise<void>
 }
 
-export const useGoalStore = create<GoalStore>((set) => ({
+export const useGoalStore = create<GoalStore>((set, get) => ({
   goals: [],
   loading: false,
   error: null,
@@ -41,8 +43,24 @@ export const useGoalStore = create<GoalStore>((set) => ({
     set((s) => ({ goals: s.goals.map((g) => (g.id === id ? updated : g)) }))
   },
 
+  reorderGoals: async (ids) => {
+    await ipc.reorderGoals(ids)
+    const current = get().goals
+    const ordered = ids.map((id, i) => {
+      const g = current.find((g) => g.id === id)!
+      return { ...g, sortOrder: i }
+    })
+    set({ goals: ordered })
+  },
+
   completeGoal: async (id) => {
     const updated = await ipc.completeGoal(id)
+    set((s) => ({ goals: s.goals.map((g) => (g.id === id ? updated : g)) }))
+    return updated
+  },
+
+  uncompleteGoal: async (id) => {
+    const updated = await ipc.uncompleteGoal(id)
     set((s) => ({ goals: s.goals.map((g) => (g.id === id ? updated : g)) }))
     return updated
   },

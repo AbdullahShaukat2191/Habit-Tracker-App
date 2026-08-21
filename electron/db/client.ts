@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 import { runMigrations } from './migrate'
-import { seedQuotes, seedDefaultSettings } from './seed'
+import { seedQuotes, seedDefaultSettings, seedQuoteAssignments } from './seed'
 import path from 'path'
 import { app } from 'electron'
 
@@ -28,6 +28,7 @@ export function initDb() {
 
   seedQuotes(_db, appResourcePath)
   seedDefaultSettings(_db)
+  seedQuoteAssignments(_db)
 
   return _db
 }

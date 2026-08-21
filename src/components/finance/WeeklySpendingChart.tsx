@@ -1,5 +1,8 @@
 'use client'
 import React, { useState } from 'react'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface WeeklySpendingChartProps {
   data: number[] // 7 entries, Monday..Sunday
@@ -26,6 +29,7 @@ function topRoundedRectPath(x: number, y: number, width: number, height: number,
 }
 
 export function WeeklySpendingChart({ data }: WeeklySpendingChartProps) {
+  const currency = useSettingsStore((s) => s.get(SETTING_KEYS.FINANCE_CURRENCY))
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   const plotWidth = WIDTH - PADDING.left - PADDING.right
@@ -106,7 +110,7 @@ export function WeeklySpendingChart({ data }: WeeklySpendingChartProps) {
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           >
-            <strong style={{ color: 'var(--text-primary)' }}>Rs. {data[hoverIndex].toLocaleString()}</strong>{' '}
+            <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(currency, data[hoverIndex])}</strong>{' '}
             <span style={{ color: 'var(--text-secondary)' }}>{LABELS[hoverIndex]}</span>
           </div>
         )

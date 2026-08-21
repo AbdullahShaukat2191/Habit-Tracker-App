@@ -89,12 +89,19 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       id TEXT PRIMARY KEY,
       author TEXT NOT NULL,
       text TEXT NOT NULL,
-      source TEXT NOT NULL,
       bundled INTEGER NOT NULL DEFAULT 0,
       hidden INTEGER NOT NULL DEFAULT 0,
       added_at INTEGER NOT NULL
     )
   `)
+
+  // Quotes now use a single free-text "author" field instead of a separate
+  // "source" citation column — drop it for databases created before this change.
+  try {
+    sqlite.exec('ALTER TABLE quotes DROP COLUMN source')
+  } catch {
+    // Column already dropped (or table freshly created without it) — safe to ignore
+  }
 
   // Add is_optional to habits for existing databases
   try {
@@ -116,11 +123,30 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       description TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       completed_at INTEGER,
       archived_at INTEGER
     )
   `)
+
+  // Add sort_order to wishlist_items for existing databases, then backfill it
+  // from createdAt order — but only on the run that actually adds the column,
+  // so a later launch never clobbers a user's saved drag order back to createdAt.
+  let addedWishlistSortOrder = false
+  try {
+    sqlite.exec('ALTER TABLE wishlist_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0')
+    addedWishlistSortOrder = true
+  } catch {
+    // Column already exists — safe to ignore
+  }
+  if (addedWishlistSortOrder) {
+    const rows = sqlite.prepare('SELECT id FROM wishlist_items ORDER BY created_at ASC').all() as { id: string }[]
+    const updateOrder = sqlite.prepare('UPDATE wishlist_items SET sort_order = ? WHERE id = ?')
+    sqlite.transaction(() => {
+      rows.forEach((row, index) => updateOrder.run(index, row.id))
+    })()
+  }
 
   // Payments: paid-project catalogue, milestones, and the automated payment ledger
   sqlite.exec(`
@@ -131,10 +157,18 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       color TEXT NOT NULL,
       total_amount REAL NOT NULL DEFAULT 0,
       developer TEXT,
+      currency TEXT NOT NULL DEFAULT 'USD',
       created_at INTEGER NOT NULL,
       FOREIGN KEY (source_project_id) REFERENCES projects(id) ON DELETE SET NULL
     )
   `)
+
+  // Add currency to payment_projects for existing databases
+  try {
+    sqlite.exec("ALTER TABLE payment_projects ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD'")
+  } catch {
+    // Column already exists — safe to ignore
+  }
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS payment_milestones (
@@ -196,6 +230,18 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       note TEXT,
       date TEXT NOT NULL,
       created_at INTEGER NOT NULL
+    )
+  `)
+
+  // Which quote is shown on a given page (+ optional tab). tab_id is '' (not
+  // NULL) for pages with one page-wide quote, so (page_id, tab_id) can be a
+  // reliable uniqueness key — NULL never equals NULL in SQL.
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS quote_assignments (
+      page_id TEXT NOT NULL,
+      tab_id TEXT NOT NULL DEFAULT '',
+      quote_id TEXT NOT NULL,
+      PRIMARY KEY (page_id, tab_id)
     )
   `)
 }

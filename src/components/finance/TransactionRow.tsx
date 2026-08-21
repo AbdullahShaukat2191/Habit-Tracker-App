@@ -3,6 +3,9 @@ import React from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { FinanceTransaction, FinanceCategory } from '@shared/types'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
+import { formatCurrency } from '@/lib/currency'
 
 interface TransactionRowProps {
   transaction: FinanceTransaction
@@ -12,6 +15,7 @@ interface TransactionRowProps {
 }
 
 export function TransactionRow({ transaction, category, onEdit, onDelete }: TransactionRowProps) {
+  const currency = useSettingsStore((s) => s.get(SETTING_KEYS.FINANCE_CURRENCY))
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '12px 16px', marginBottom: 8 }}>
       <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: category?.color ?? 'var(--text-tertiary)', flexShrink: 0 }} />
@@ -22,7 +26,7 @@ export function TransactionRow({ transaction, category, onEdit, onDelete }: Tran
         </p>
       </div>
       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>
-        Rs. {transaction.amount.toLocaleString()}
+        {formatCurrency(currency, transaction.amount)}
       </span>
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
         <button onClick={onEdit} style={{ background: 'none', border: 'none', padding: '4px 6px', cursor: 'pointer', color: 'var(--text-secondary)' }} title="Edit">

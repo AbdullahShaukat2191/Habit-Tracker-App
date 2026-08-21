@@ -16,7 +16,7 @@ import type {
   CreateFinanceCategoryInput, UpdateFinanceCategoryInput,
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
-  SettingsMap, ToggleResult,
+  SettingsMap, ToggleResult, QuoteAssignments,
 } from '../../shared/types'
 
 interface ElectronAPI {
@@ -74,12 +74,15 @@ interface ElectronAPI {
   listGoals: () => Promise<Goal[]>
   createGoal: (input: CreateGoalInput) => Promise<Goal>
   updateGoal: (id: string, input: UpdateGoalInput) => Promise<Goal>
+  reorderGoals: (ids: string[]) => Promise<void>
   completeGoal: (id: string) => Promise<Goal>
+  uncompleteGoal: (id: string) => Promise<Goal>
   deleteGoal: (id: string) => Promise<void>
 
   listWishlistItems: () => Promise<WishlistItem[]>
   createWishlistItem: (input: CreateWishlistInput) => Promise<WishlistItem>
   updateWishlistItem: (id: string, input: UpdateWishlistInput) => Promise<WishlistItem>
+  reorderWishlistItems: (ids: string[]) => Promise<void>
   completeWishlistItem: (id: string) => Promise<WishlistItem>
   uncompleteWishlistItem: (id: string) => Promise<WishlistItem>
   deleteWishlistItem: (id: string) => Promise<void>
@@ -97,6 +100,9 @@ interface ElectronAPI {
   updateQuote: (id: string, input: UpdateQuoteInput) => Promise<Quote>
   deleteQuote: (id: string) => Promise<void>
   toggleQuoteHidden: (id: string) => Promise<void>
+
+  getAllQuoteAssignments: () => Promise<QuoteAssignments>
+  setQuoteAssignment: (pageId: string, tabId: string, quoteId: string) => Promise<void>
 
   getAppVersion: () => Promise<string>
   getDbPath: () => Promise<string>
@@ -117,6 +123,12 @@ interface ElectronAPI {
   removeNavigateListener: () => void
   onReportReady: (callback: (month: string) => void) => void
   removeReportReadyListener: () => void
+
+  zoomIn: () => Promise<void>
+  zoomOut: () => Promise<void>
+  zoomReset: () => Promise<void>
+  onZoomChanged: (callback: (percent: number) => void) => void
+  removeZoomChangedListener: () => void
 }
 
 declare global {

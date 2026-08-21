@@ -19,6 +19,7 @@ import { useTaskStore } from '@/lib/store/taskStore'
 import ProjectCard from '@/components/projects/ProjectCard'
 import { ProjectModal } from '@/components/projects/ProjectModal'
 import PaymentsView from '@/components/payments/PaymentsView'
+import { PageQuote } from '@/components/layout/PageQuote'
 
 type ModalState =
   | { type: 'add' }
@@ -141,6 +142,14 @@ export default function ProjectsPage() {
           )}
         </div>
 
+        {outerTab === 'projects' ? (
+          <PageQuote pageId="projects" />
+        ) : (
+          <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+            Track what’s been paid, what’s owed, and what’s next.
+          </p>
+        )}
+
         <div style={{ display: 'flex', gap: 4 }}>
           {(['projects', 'payments'] as const).map((tab) => (
             <button
@@ -162,12 +171,6 @@ export default function ProjectsPage() {
             </button>
           ))}
         </div>
-
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic', paddingBottom: 10 }}>
-          {outerTab === 'projects'
-            ? '“Ideas are worth nothing without execution.” — Alex Hormozi'
-            : 'Track what’s been paid, what’s owed, and what’s next.'}
-        </p>
       </div>
 
       {outerTab === 'projects' ? (

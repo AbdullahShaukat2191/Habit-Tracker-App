@@ -73,8 +73,10 @@ export function deleteHabit(id: string): void {
 
 export function reorderHabits(ids: string[]): void {
   const db = getDb()
-  ids.forEach((id, index) => {
-    db.update(habits).set({ sortOrder: index }).where(eq(habits.id, id)).run()
+  db.transaction((tx) => {
+    ids.forEach((id, index) => {
+      tx.update(habits).set({ sortOrder: index }).where(eq(habits.id, id)).run()
+    })
   })
 }
 

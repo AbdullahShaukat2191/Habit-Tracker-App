@@ -2,6 +2,9 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
 import { useFinanceStore } from '@/lib/store/financeStore'
+import { useSettingsStore } from '@/lib/store/settingsStore'
+import { SETTING_KEYS } from '@shared/types'
+import { formatCurrency, getCurrencySymbol } from '@/lib/currency'
 import { SavingsEntryRow } from './SavingsEntryRow'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 
@@ -13,6 +16,7 @@ const inputStyle: React.CSSProperties = {
 
 export function FinanceSavingsTab() {
   const { savingsEntries, createSavingsEntry, deleteSavingsEntry } = useFinanceStore()
+  const currency = useSettingsStore((s) => s.get(SETTING_KEYS.FINANCE_CURRENCY))
 
   const [showAdd, setShowAdd] = useState(false)
   const [amount, setAmount] = useState('')
@@ -44,7 +48,7 @@ export function FinanceSavingsTab() {
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 32px' }}>
       <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '20px 24px', marginBottom: 20, textAlign: 'center' }}>
         <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Saved</p>
-        <p style={{ margin: '0 0 16px', fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>Rs. {totalSaved.toLocaleString()}</p>
+        <p style={{ margin: '0 0 16px', fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(currency, totalSaved)}</p>
         <button
           onClick={() => setShowAdd((v) => !v)}
           style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid var(--accent)', backgroundColor: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
@@ -55,7 +59,7 @@ export function FinanceSavingsTab() {
         {showAdd && (
           <div style={{ backgroundColor: 'var(--bg-surface-2)', borderRadius: 8, padding: 14, marginTop: 14, textAlign: 'left' }}>
             <div style={{ marginBottom: 8 }}>
-              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (Rs.) — negative to withdraw" style={inputStyle} />
+              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={`Amount (${getCurrencySymbol(currency)}) — negative to withdraw`} style={inputStyle} />
             </div>
             <div style={{ marginBottom: 10 }}>
               <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" style={inputStyle} />

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -11,6 +11,7 @@ import type { WishlistItem, CreateWishlistInput } from '@shared/types'
 import { useWishlistStore } from '@/lib/store/wishlistStore'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { goalConfetti } from '@/lib/confetti'
+import { PageQuote } from '@/components/layout/PageQuote'
 
 // ─── Add/Edit Modal ───────────────────────────────────────────────────────────
 
@@ -312,13 +313,11 @@ function WishSortableList({
 type DeletePending = { id: string; action: () => Promise<void> } | null
 
 export default function WishlistPage() {
-  const { items, loadItems, createItem, updateItem, completeItem, uncompleteItem, deleteItem, hardDeleteItem } = useWishlistStore()
+  const { items, loadItems, createItem, updateItem, reorderItems, completeItem, uncompleteItem, deleteItem, hardDeleteItem } = useWishlistStore()
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'got'>('active')
   const [deletePending, setDeletePending] = useState<DeletePending>(null)
-  const [wishOrder, setWishOrder] = useState<string[] | null>(null)
-  const activeItemsRef = useRef<WishlistItem[]>([])
 
   useEffect(() => { loadItems() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -329,14 +328,6 @@ export default function WishlistPage() {
 
   const activeItems = useMemo(() => items.filter((i) => i.completedAt === null && i.archivedAt === null), [items])
   const gotItems = useMemo(() => items.filter((i) => i.completedAt !== null), [items])
-
-  useEffect(() => { activeItemsRef.current = activeItems }, [activeItems])
-
-  const orderedActiveItems = useMemo(() => {
-    if (wishOrder === null) return activeItems
-    const orderMap = new Map(wishOrder.map((id, i) => [id, i]))
-    return [...activeItems].sort((a, b) => (orderMap.get(a.id) ?? 999999) - (orderMap.get(b.id) ?? 999999))
-  }, [activeItems, wishOrder])
 
   const handleSave = useCallback(async (input: CreateWishlistInput) => {
     if (editingItem) { await updateItem(editingItem.id, input); setEditingItem(null) }
@@ -354,15 +345,16 @@ export default function WishlistPage() {
     }
   }, [items, deleteItem, hardDeleteItem])
 
-  const handleWishDragEnd = useCallback((activeId: string, overId: string) => {
-    setWishOrder((prev) => {
-      const base = prev ?? activeItemsRef.current.map((i) => i.id)
-      const oldIdx = base.indexOf(activeId)
-      const newIdx = base.indexOf(overId)
-      if (oldIdx === -1 || newIdx === -1) return prev
-      return arrayMove(base, oldIdx, newIdx)
-    })
-  }, [])
+  const handleWishDragEnd = useCallback(
+    (activeId: string, overId: string) => {
+      const oldIndex = activeItems.findIndex((i) => i.id === activeId)
+      const newIndex = activeItems.findIndex((i) => i.id === overId)
+      if (oldIndex === -1 || newIndex === -1) return
+      const newOrder = arrayMove(activeItems, oldIndex, newIndex)
+      reorderItems(newOrder.map((i) => i.id))
+    },
+    [activeItems, reorderItems]
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-base)', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
@@ -379,9 +371,7 @@ export default function WishlistPage() {
             + Add Wish
           </button>
         </div>
-        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-          &ldquo;The goal isn&rsquo;t to be rich. The goal is to be free.&rdquo; — Alex Hormozi
-        </p>
+        <PageQuote pageId="wishlist" />
         <div style={{ display: 'flex', gap: 4 }}>
           {(['active', 'got'] as const).map((tab) => (
             <button
@@ -409,7 +399,7 @@ export default function WishlistPage() {
             </div>
           ) : (
             <WishSortableList
-              items={orderedActiveItems}
+              items={activeItems}
               onComplete={completeItem}
               onUncomplete={uncompleteItem}
               onEdit={handleEdit}

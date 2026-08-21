@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { format, isYesterday } from 'date-fns'
 import type { PaymentRecord } from '@shared/types'
 import { usePaymentStore } from '@/lib/store/paymentStore'
+import { formatCurrency } from '@/lib/currency'
 
 function buildGroupLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00')
@@ -147,7 +148,7 @@ export default function PaymentHistoryTab() {
         {!groupByDate ? (
           <div>
             {sortedRecords.map((r) => (
-              <RecordRow key={r.id} record={r} label={rowLabel(r)} projectName={projectMap.get(r.paymentProjectId)?.name} projectColor={projectMap.get(r.paymentProjectId)?.color} />
+              <RecordRow key={r.id} record={r} label={rowLabel(r)} projectName={projectMap.get(r.paymentProjectId)?.name} projectColor={projectMap.get(r.paymentProjectId)?.color} currency={projectMap.get(r.paymentProjectId)?.currency} />
             ))}
           </div>
         ) : sortOrder === 'projects' ? (
@@ -166,12 +167,13 @@ export default function PaymentHistoryTab() {
 }
 
 function RecordRow({
-  record, label, projectName, projectColor,
+  record, label, projectName, projectColor, currency,
 }: {
   record: PaymentRecord
   label: string
   projectName?: string
   projectColor?: string
+  currency?: string
 }) {
   return (
     <div
@@ -193,7 +195,7 @@ function RecordRow({
         </p>
       </div>
       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0 }}>
-        ${record.amount.toLocaleString()}
+        {formatCurrency(currency, record.amount)}
       </span>
     </div>
   )
@@ -231,7 +233,7 @@ function GroupedByDate({
             </h3>
             {groupRecords.map((r) => {
               const project = projectMap.get(r.paymentProjectId)
-              return <RecordRow key={r.id} record={r} label={rowLabel(r)} projectName={project?.name} projectColor={project?.color} />
+              return <RecordRow key={r.id} record={r} label={rowLabel(r)} projectName={project?.name} projectColor={project?.color} currency={project?.currency} />
             })}
           </div>
         )
@@ -266,7 +268,7 @@ function GroupedByProject({
               {label} &middot; {count}
             </h3>
             {groupRecords.map((r) => (
-              <RecordRow key={r.id} record={r} label={rowLabel(r)} projectName={project?.name} projectColor={project?.color} />
+              <RecordRow key={r.id} record={r} label={rowLabel(r)} projectName={project?.name} projectColor={project?.color} currency={project?.currency} />
             ))}
           </div>
         )

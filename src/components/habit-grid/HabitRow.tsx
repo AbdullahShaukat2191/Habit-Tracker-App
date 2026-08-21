@@ -1,5 +1,6 @@
 'use client'
 import React, { useCallback, useMemo, useState } from 'react'
+import { format } from 'date-fns'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Trash2 } from 'lucide-react'
@@ -63,8 +64,8 @@ const HabitRowInner = ({
     [completions, habit.id]
   )
   const score = useMemo(
-    () => computeScore(habit.schedule, completedDates, currentMonth),
-    [habit.schedule, completedDates, currentMonth]
+    () => computeScore(habit.schedule, completedDates, currentMonth, habit.createdAt),
+    [habit.schedule, completedDates, currentMonth, habit.createdAt]
   )
   // Full history (not just the viewed month) so streaks carry over month boundaries
   const streakCompletedDates = useMemo(
@@ -72,13 +73,13 @@ const HabitRowInner = ({
     [allCompletions, habit.id]
   )
   const streak = useMemo(
-    () => computeStreak(habit.schedule, streakCompletedDates),
-    [habit.schedule, streakCompletedDates]
+    () => computeStreak(habit.schedule, streakCompletedDates, habit.createdAt),
+    [habit.schedule, streakCompletedDates, habit.createdAt]
   )
   // Full-month applicable days — denominator for score display
   const applicableDays = useMemo(
-    () => getApplicableDays(habit.schedule, currentMonth),
-    [habit.schedule, currentMonth]
+    () => getApplicableDays(habit.schedule, currentMonth, habit.createdAt),
+    [habit.schedule, currentMonth, habit.createdAt]
   )
 
   const todayMonth = today.slice(0, 7)
@@ -108,9 +109,12 @@ const HabitRowInner = ({
 
   const days = useMemo(() => {
     const cells: React.ReactNode[] = []
+    const createdDateStr = format(new Date(habit.createdAt), 'yyyy-MM-dd')
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${currentMonth}-${String(d).padStart(2, '0')}`
-      const isApplicable = isApplicableDay(habit.schedule, dateStr)
+      // Before the habit existed — treated identically to "not scheduled today"
+      const existedYet = dateStr >= createdDateStr
+      const isApplicable = existedYet && isApplicableDay(habit.schedule, dateStr)
       const isDone = completedDates.has(dateStr)
       const isToday = dateStr === today
 
@@ -132,7 +136,7 @@ const HabitRowInner = ({
       )
     }
     return cells
-  }, [daysInMonth, currentMonth, completedDates, habit.schedule, today, allowPastDays, handleToggle])
+  }, [daysInMonth, currentMonth, completedDates, habit.schedule, habit.createdAt, today, allowPastDays, handleToggle])
 
   return (
     <div
