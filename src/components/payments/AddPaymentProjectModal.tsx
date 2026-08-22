@@ -1,12 +1,13 @@
 'use client'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import type { Project, CreatePaymentProjectInput } from '@shared/types'
+import type { Project, PaymentProject, CreatePaymentProjectInput } from '@shared/types'
 import { CURRENCIES, type CurrencyCode } from '@/lib/currency'
 import { PRESET_COLORS } from '@/lib/constants'
 
 interface AddPaymentProjectModalProps {
   importableProjects: Project[]
+  existingPaymentProjects: PaymentProject[]
   onCreate: (input: CreatePaymentProjectInput) => Promise<void>
   onImport: (projectIds: string[]) => Promise<void>
   onClose: () => void
@@ -36,7 +37,7 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '0.05em',
 }
 
-export function AddPaymentProjectModal({ importableProjects, onCreate, onImport, onClose }: AddPaymentProjectModalProps) {
+export function AddPaymentProjectModal({ importableProjects, existingPaymentProjects, onCreate, onImport, onClose }: AddPaymentProjectModalProps) {
   const [mode, setMode] = useState<'create' | 'import'>('create')
   const [name, setName] = useState('')
   const [selectedColor, setSelectedColor] = useState<string>(PRESET_COLORS[0])
@@ -78,6 +79,11 @@ export function AddPaymentProjectModal({ importableProjects, onCreate, onImport,
       nameInputRef.current?.focus()
       return
     }
+    if (existingPaymentProjects.some((p) => p.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+      setNameError('A payment project with this name already exists')
+      nameInputRef.current?.focus()
+      return
+    }
     setNameError('')
     setSaving(true)
     try {
@@ -90,7 +96,7 @@ export function AddPaymentProjectModal({ importableProjects, onCreate, onImport,
     } finally {
       setSaving(false)
     }
-  }, [name, selectedColor, totalAmount, developer, currency, onCreate, onClose])
+  }, [name, selectedColor, totalAmount, developer, currency, existingPaymentProjects, onCreate, onClose])
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {

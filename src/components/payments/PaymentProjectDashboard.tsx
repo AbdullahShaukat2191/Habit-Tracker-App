@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useRef } from 'react'
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { PaymentProject, PaymentMilestone, PaymentRecord } from '@shared/types'
@@ -106,21 +106,27 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
   const [nameDraft, setNameDraft] = useState(paymentProject.name)
   const [colorDraft, setColorDraft] = useState(paymentProject.color)
   const [totalDraft, setTotalDraft] = useState(String(paymentProject.totalAmount))
+  const [totalError, setTotalError] = useState('')
   const [developerDraft, setDeveloperDraft] = useState(paymentProject.developer ?? '')
   const [currencyDraft, setCurrencyDraft] = useState<CurrencyCode>(
     isCurrencyCode(paymentProject.currency) ? paymentProject.currency : 'USD'
   )
   const [savingHeader, setSavingHeader] = useState(false)
+  const totalInputRef = useRef<HTMLInputElement>(null)
 
   const [showAddMilestone, setShowAddMilestone] = useState(false)
   const [milestoneTitle, setMilestoneTitle] = useState('')
   const [milestoneDescription, setMilestoneDescription] = useState('')
   const [milestoneAmount, setMilestoneAmount] = useState('')
+  const [milestoneAmountError, setMilestoneAmountError] = useState('')
+  const milestoneAmountInputRef = useRef<HTMLInputElement>(null)
 
   const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editAmount, setEditAmount] = useState('')
+  const [editAmountError, setEditAmountError] = useState('')
+  const editAmountInputRef = useRef<HTMLInputElement>(null)
 
   const [showAddPayment, setShowAddPayment] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
@@ -145,6 +151,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
     setNameDraft(paymentProject.name)
     setColorDraft(paymentProject.color)
     setTotalDraft(String(paymentProject.totalAmount))
+    setTotalError('')
     setDeveloperDraft(paymentProject.developer ?? '')
     setCurrencyDraft(isCurrencyCode(paymentProject.currency) ? paymentProject.currency : 'USD')
     setEditingHeader(true)
@@ -153,13 +160,19 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
   const handleSaveHeader = useCallback(async () => {
     const trimmedName = nameDraft.trim()
     if (!trimmedName) return
+    const parsedTotal = parseFloat(totalDraft)
+    if (isNaN(parsedTotal) || parsedTotal <= 0) {
+      setTotalError('Enter an amount greater than 0')
+      totalInputRef.current?.focus()
+      return
+    }
+    setTotalError('')
     setSavingHeader(true)
     try {
-      const parsedTotal = parseFloat(totalDraft)
       await updatePaymentProject(paymentProject.id, {
         name: trimmedName,
         color: colorDraft,
-        totalAmount: isNaN(parsedTotal) ? 0 : parsedTotal,
+        totalAmount: parsedTotal,
         developer: developerDraft.trim() || null,
         currency: currencyDraft,
       })
@@ -173,10 +186,16 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
     const trimmedTitle = milestoneTitle.trim()
     if (!trimmedTitle) return
     const parsedAmount = parseFloat(milestoneAmount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setMilestoneAmountError('Enter an amount greater than 0')
+      milestoneAmountInputRef.current?.focus()
+      return
+    }
+    setMilestoneAmountError('')
     await createPaymentMilestone(paymentProject.id, {
       title: trimmedTitle,
       description: milestoneDescription.trim() || undefined,
-      amount: isNaN(parsedAmount) ? 0 : parsedAmount,
+      amount: parsedAmount,
     })
     setMilestoneTitle('')
     setMilestoneDescription('')
@@ -189,6 +208,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
     setEditTitle(m.title)
     setEditDescription(m.description ?? '')
     setEditAmount(String(m.amount))
+    setEditAmountError('')
   }, [])
 
   const handleSaveMilestoneEdit = useCallback(async () => {
@@ -196,10 +216,16 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
     const trimmedTitle = editTitle.trim()
     if (!trimmedTitle) return
     const parsedAmount = parseFloat(editAmount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setEditAmountError('Enter an amount greater than 0')
+      editAmountInputRef.current?.focus()
+      return
+    }
+    setEditAmountError('')
     await updatePaymentMilestone(editingMilestoneId, {
       title: trimmedTitle,
       description: editDescription.trim() || undefined,
-      amount: isNaN(parsedAmount) ? 0 : parsedAmount,
+      amount: parsedAmount,
     })
     setEditingMilestoneId(null)
   }, [editingMilestoneId, editTitle, editDescription, editAmount, updatePaymentMilestone])
@@ -274,7 +300,13 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                 <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label style={formLabelStyle}>Total Amount</label>
-                    <input type="number" min="0" step="0.01" value={totalDraft} onChange={(e) => setTotalDraft(e.target.value)} style={formInputStyle} />
+                    <input
+                      ref={totalInputRef}
+                      type="number" min="0" step="0.01" value={totalDraft}
+                      onChange={(e) => { setTotalDraft(e.target.value); if (totalError) setTotalError('') }}
+                      style={{ ...formInputStyle, border: `1px solid ${totalError ? '#f87171' : 'var(--border-subtle)'}` }}
+                    />
+                    {totalError && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#f87171' }}>{totalError}</p>}
                   </div>
                   <div style={{ flex: '0 0 90px' }}>
                     <label style={formLabelStyle}>Currency</label>
@@ -294,7 +326,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setEditingHeader(false)} style={cancelButtonStyle}>Cancel</button>
+                  <button onClick={() => { setEditingHeader(false); setTotalError('') }} style={cancelButtonStyle}>Cancel</button>
                   <button onClick={handleSaveHeader} disabled={savingHeader} style={{ ...primaryButtonStyle, opacity: savingHeader ? 0.7 : 1 }}>
                     {savingHeader ? 'Saving...' : 'Save'}
                   </button>
@@ -344,7 +376,7 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
               <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Milestones
               </h3>
-              <button onClick={() => setShowAddMilestone((v) => !v)} style={pillButtonStyle}>+ Add Milestone</button>
+              <button onClick={() => { setShowAddMilestone((v) => !v); setMilestoneAmountError('') }} style={pillButtonStyle}>+ Add Milestone</button>
             </div>
 
             {showAddMilestone && (
@@ -362,10 +394,17 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                   />
                 </div>
                 <div style={{ marginBottom: 10 }}>
-                  <input type="number" min="0" step="0.01" value={milestoneAmount} onChange={(e) => setMilestoneAmount(e.target.value)} placeholder="Amount" style={formInputStyle} />
+                  <input
+                    ref={milestoneAmountInputRef}
+                    type="number" min="0" step="0.01" value={milestoneAmount}
+                    onChange={(e) => { setMilestoneAmount(e.target.value); if (milestoneAmountError) setMilestoneAmountError('') }}
+                    placeholder="Amount"
+                    style={{ ...formInputStyle, border: `1px solid ${milestoneAmountError ? '#f87171' : 'var(--border-subtle)'}` }}
+                  />
+                  {milestoneAmountError && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#f87171' }}>{milestoneAmountError}</p>}
                 </div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowAddMilestone(false)} style={cancelButtonStyle}>Cancel</button>
+                  <button onClick={() => { setShowAddMilestone(false); setMilestoneAmountError('') }} style={cancelButtonStyle}>Cancel</button>
                   <button onClick={handleAddMilestone} style={primaryButtonStyle}>Add</button>
                 </div>
               </div>
@@ -384,10 +423,16 @@ export function PaymentProjectDashboard({ paymentProject, onBack }: PaymentProje
                       <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} style={{ ...formInputStyle, resize: 'vertical' }} />
                     </div>
                     <div style={{ marginBottom: 10 }}>
-                      <input type="number" min="0" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} style={formInputStyle} />
+                      <input
+                        ref={editAmountInputRef}
+                        type="number" min="0" step="0.01" value={editAmount}
+                        onChange={(e) => { setEditAmount(e.target.value); if (editAmountError) setEditAmountError('') }}
+                        style={{ ...formInputStyle, border: `1px solid ${editAmountError ? '#f87171' : 'var(--border-subtle)'}` }}
+                      />
+                      {editAmountError && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#f87171' }}>{editAmountError}</p>}
                     </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <button onClick={() => setEditingMilestoneId(null)} style={cancelButtonStyle}>Cancel</button>
+                      <button onClick={() => { setEditingMilestoneId(null); setEditAmountError('') }} style={cancelButtonStyle}>Cancel</button>
                       <button onClick={handleSaveMilestoneEdit} style={primaryButtonStyle}>Save</button>
                     </div>
                   </div>

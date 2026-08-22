@@ -205,6 +205,7 @@ export default function ProjectsPage() {
                 key={modalState.type === 'edit' ? modalState.project.id : 'add'}
                 mode={modalState.type}
                 project={modalState.type === 'edit' ? modalState.project : undefined}
+                existingProjects={projects}
                 onSave={handleSave}
                 onClose={handleCloseModal}
               />

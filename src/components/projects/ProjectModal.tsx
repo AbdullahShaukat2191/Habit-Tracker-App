@@ -18,11 +18,12 @@ const COLOR_NAMES: Record<string, string> = {
 interface ProjectModalProps {
   mode: 'add' | 'edit'
   project?: Project
+  existingProjects: Project[]
   onSave: (name: string, color: string) => Promise<void>
   onClose: () => void
 }
 
-export function ProjectModal({ mode, project, onSave, onClose }: ProjectModalProps) {
+export function ProjectModal({ mode, project, existingProjects, onSave, onClose }: ProjectModalProps) {
   const [name, setName] = useState(mode === 'edit' && project ? project.name : '')
   const [selectedColor, setSelectedColor] = useState<string>(() => {
     if (mode === 'edit' && project) {
@@ -83,6 +84,14 @@ export function ProjectModal({ mode, project, onSave, onClose }: ProjectModalPro
       nameInputRef.current?.focus()
       return
     }
+    if (
+      mode === 'add' &&
+      existingProjects.some((p) => p.name.trim().toLowerCase() === trimmed.toLowerCase())
+    ) {
+      setNameError('A project with this name already exists')
+      nameInputRef.current?.focus()
+      return
+    }
     setNameError('')
     setSaving(true)
     setSaveError('')
@@ -94,7 +103,7 @@ export function ProjectModal({ mode, project, onSave, onClose }: ProjectModalPro
     } finally {
       setSaving(false)
     }
-  }, [name, selectedColor, onSave, onClose])
+  }, [name, selectedColor, mode, existingProjects, onSave, onClose])
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

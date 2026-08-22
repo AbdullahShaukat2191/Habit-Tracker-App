@@ -54,6 +54,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryColor, setNewCategoryColor] = useState<string>(PRESET_COLORS[0])
+  const [newCategoryError, setNewCategoryError] = useState('')
 
   const titleInputRef = useRef<HTMLInputElement>(null)
   const amountInputRef = useRef<HTMLInputElement>(null)
@@ -85,11 +86,16 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
   const handleCreateCategory = useCallback(async () => {
     const trimmed = newCategoryName.trim()
     if (!trimmed) return
+    if (activeCategories.some((c) => c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+      setNewCategoryError('A category with this name already exists')
+      return
+    }
+    setNewCategoryError('')
     const category = await createCategory({ name: trimmed, color: newCategoryColor })
     setCategoryId(category.id)
     setNewCategoryName('')
     setShowNewCategory(false)
-  }, [newCategoryName, newCategoryColor, createCategory])
+  }, [newCategoryName, newCategoryColor, activeCategories, createCategory])
 
   const handleSave = useCallback(async () => {
     const trimmedTitle = title.trim()
@@ -213,7 +219,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
               </button>
             ))}
             <button
-              onClick={() => setShowNewCategory((v) => !v)}
+              onClick={() => { setShowNewCategory((v) => !v); setNewCategoryError('') }}
               style={{ padding: '5px 12px', borderRadius: 16, fontSize: 13, cursor: 'pointer', border: '1px dashed var(--border-strong)', backgroundColor: 'transparent', color: 'var(--text-secondary)' }}
             >
               + New
@@ -224,10 +230,11 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
             <div style={{ backgroundColor: 'var(--bg-surface-2)', borderRadius: 8, padding: 12, marginTop: 10 }}>
               <input
                 value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
+                onChange={(e) => { setNewCategoryName(e.target.value); if (newCategoryError) setNewCategoryError('') }}
                 placeholder="Category name"
-                style={{ ...inputStyle, marginBottom: 8 }}
+                style={{ ...inputStyle, marginBottom: newCategoryError ? 4 : 8, border: `1px solid ${newCategoryError ? '#f87171' : 'var(--border-subtle)'}` }}
               />
+              {newCategoryError && <p style={{ margin: '0 0 8px', fontSize: 12, color: '#f87171' }}>{newCategoryError}</p>}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                 {PRESET_COLORS.map((color) => (
                   <button
@@ -241,7 +248,7 @@ export function TransactionModal({ mode, transaction, categories, onClose }: Tra
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowNewCategory(false)} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', backgroundColor: 'transparent', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => { setShowNewCategory(false); setNewCategoryError('') }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-subtle)', backgroundColor: 'transparent', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
                 <button onClick={handleCreateCategory} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', backgroundColor: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add</button>
               </div>
             </div>

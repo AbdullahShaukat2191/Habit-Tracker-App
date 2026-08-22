@@ -10,6 +10,7 @@ import { PerfectDayDialog } from '@/components/habit-grid/PerfectDayDialog'
 import { MonthlyReportCard } from '@/components/habit-grid/MonthlyReportCard'
 import type { Habit, DayAbbreviation, MonthlyReport } from '@shared/types'
 import * as ipc from '@/lib/ipc'
+import { useToastStore } from '@/lib/store/toastStore'
 
 export default function HabitScorecardPage() {
   const habits = useHabitStore((s) => s.habits)
@@ -24,6 +25,7 @@ export default function HabitScorecardPage() {
   const updateHabit = useHabitStore((s) => s.updateHabit)
   const deleteHabit = useHabitStore((s) => s.deleteHabit)
   const reorderHabits = useHabitStore((s) => s.reorderHabits)
+  const showToast = useToastStore((s) => s.show)
 
   // Never compute today during SSR — always derive from the renderer's local clock,
   // exactly like Sidebar does. Refreshes at midnight if the app is left open overnight.
@@ -103,8 +105,11 @@ export default function HabitScorecardPage() {
       setReport(null)
       return
     }
-    ipc.getReport(currentMonth).then((r) => setReport(r)).catch(() => {})
-  }, [currentMonth, thisMonth])
+    ipc.getReport(currentMonth).then((r) => setReport(r)).catch((err) => {
+      console.error('Failed to load monthly report:', err)
+      showToast('Failed to generate report', 'error')
+    })
+  }, [currentMonth, thisMonth, showToast])
 
   // Listen for open-add-modal custom event (from Ctrl+N global shortcut)
   useEffect(() => {

@@ -94,6 +94,7 @@ export default function PaymentProjectsTab() {
         {showAddModal && (
           <AddPaymentProjectModal
             importableProjects={importableProjects}
+            existingPaymentProjects={paymentProjects}
             onCreate={handleCreate}
             onImport={handleImport}
             onClose={() => setShowAddModal(false)}

@@ -50,7 +50,8 @@ export function computeStreak(
   const createdDateStr = createdAt !== undefined ? format(new Date(createdAt), 'yyyy-MM-dd') : null
   let cursor = new Date()
 
-  while (streak <= 365) {
+  // No iteration cap - streaks can be any length
+  while (true) {
     const dateStr = format(cursor, 'yyyy-MM-dd')
 
     // Walked back past the habit's creation date — nothing before this counts
