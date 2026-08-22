@@ -48,8 +48,8 @@
 ```
 src/
 ├── app/            (finance, goals, layout.tsx, page.tsx, projects, settings, tasks, wishlist — Next.js routes)
-├── components/     (finance, goals, habit-grid, layout, payments, projects, tasks, ui)
-├── lib/            (confetti.ts, ipc.ts, store/)
+├── components/     (finance, goals, habit-grid, layout, payments, projects, settings, tasks, ui)
+├── lib/            (confetti.ts, ipc.ts, currency.ts, constants.ts, chartUtils.ts, store/)
 ├── styles/         (globals.css)
 └── types/          (electron.d.ts)
 
@@ -57,7 +57,7 @@ electron/
 ├── db/             (client.ts, migrate.ts, schema.ts, seed.ts, queries/)
 ├── ipc/            (handlers.ts)
 ├── types/          (auto-launch.d.ts)
-└── autoLaunch.ts, main.ts, notifications.ts, preload.ts, tray.ts
+└── autoLaunch.ts, main.ts, notifications.ts, preload.ts, tray.ts, zoom.ts
 
 shared/
 ├── __tests__/
@@ -72,7 +72,7 @@ shared/
 5. Nine `zustand` stores (`src/lib/store/*Store.ts` — habit, task, project, goal, wishlist, payment, finance, settings, toast) each `loadAll()` their full dataset on mount and optimistically patch local state after every mutating IPC call (no diffing/subscriptions — full in-memory arrays).
 6. Pure calculation logic (streaks, scores, date-range math, backfill grace windows) lives in `shared/*.ts` — deliberately Node/Electron-free so it's reusable and unit-testable from both the main process (report generation) and the renderer (live UI display) without duplication.
 
-**Data model / schema** (Drizzle tables in `electron/db/schema.ts`, 15 tables total):
+**Data model / schema** (Drizzle tables in `electron/db/schema.ts`, 16 tables total):
 
 | Table | Fields | Relationships |
 |---|---|---|
@@ -81,8 +81,8 @@ shared/
 | `tasks` | id, title, description, projectId, createdAt, completedAt, archivedAt, isOptional | → projects (nullable) |
 | `projects` | id, name, color, sortOrder, createdAt | — |
 | `goals` | id, title, description, sortOrder, createdAt, completedAt, archivedAt | — |
-| `wishlist_items` | id, title, description, createdAt, completedAt, archivedAt | — (no sortOrder) |
-| `payment_projects` | id, sourceProjectId, name, color, totalAmount, developer, createdAt | → projects (nullable, "imported from") |
+| `wishlist_items` | id, title, description, sortOrder, createdAt, completedAt, archivedAt | — |
+| `payment_projects` | id, sourceProjectId, name, color, totalAmount, developer, currency, createdAt | → projects (nullable, "imported from") |
 | `payment_milestones` | id, paymentProjectId, title, description, amount, paid, paidAt, sortOrder, createdAt | → payment_projects |
 | `payment_records` | id, paymentProjectId, milestoneId (nullable), amount, note, paidAt, createdAt | → payment_projects, payment_milestones |
 | `finance_categories` | id, name, color, sortOrder, createdAt, archivedAt | — |
@@ -90,7 +90,8 @@ shared/
 | `finance_savings_entries` | id, amount (can be negative), note, date, createdAt | — |
 | `monthly_reports` | id, month (unique), generatedAt, tier (1–6), completionPct, narrative, statsJson | — |
 | `settings` | key (PK), value | generic key/value store |
-| `quotes` | id, author ('Goggins'\|'Hormozi'), text, source, bundled, hidden, addedAt | — |
+| `quotes` | id, author (free text), text, bundled, hidden, addedAt | — |
+| `quote_assignments` | pageId, tabId (default ''), quoteId — composite PK (pageId, tabId) | which quote shows on a given page/tab |
 
 All IDs are UUID text; timestamps are epoch-ms integers; money is `real`; soft-delete is a nullable `archivedAt` epoch-ms column, used everywhere except `wishlist_items`/`finance_savings_entries` for hard-delete-only cases and `finance_categories`/`monthly_reports` where it's the sole delete mechanism.
 
@@ -103,7 +104,7 @@ All IDs are UUID text; timestamps are epoch-ms integers; money is `real`; soft-d
 ### Habits (`/`, Habit Scorecard)
 - CRUD (create/edit/soft-delete/reorder via drag), day-of-week `schedule` (no time-of-day or interval recurrence), optional-habit flag that excludes a habit from scoring
 - Toggle daily completion per cell; clicking today is always allowed, clicking a past day requires the "Allow backfilling" setting, and only the immediately-previous month is backfillable, closing at midnight on the 2nd of the following month (`shared/backfillLogic.ts`)
-- Derived data: monthly completed/applicable score (`computeScore`), running streak capped at 365 days (`computeStreak`, counts backward, skips non-scheduled days, doesn't break on an unfinished *today*), Top-3 habits by %, "Perfect Day" detection (every active non-optional scheduled habit done that day)
+- Derived data: monthly completed/applicable score (`computeScore`), running streak with no iteration cap (`computeStreak`, counts backward, skips non-scheduled days, doesn't break on an unfinished *today*, stops at the habit's own `createdAt` so it can't count days before the habit existed), Top-3 habits by %, "Perfect Day" detection (every active non-optional scheduled habit done that day)
 - Visualization: calendar-style grid (one row per habit, one column per day, up to 31 cols), month-slide transition, per-row streak/score column, progress bars for Top-3
 - Celebrations: confetti fired from the exact click point on completion; a full-screen "Perfect Day" dialog with confetti, fired once per qualifying day
 
@@ -114,13 +115,13 @@ All IDs are UUID text; timestamps are epoch-ms integers; money is `real`; soft-d
 - Confetti on individual completion; a full-screen "All tasks done" dialog (once per day, random quote) when every task for today is complete
 
 ### Goals (`/goals`)
-- CRUD, one-way completion (no `uncompleteGoal` at all — irreversible from the UI once checked), soft-delete
-- No streaks, scores, or scheduling. Drag reorder is **not persisted** (no `reorderGoals` IPC despite a `sortOrder` column existing)
+- CRUD, complete/uncomplete (same-day-only undo, matching Tasks/Wishlist), soft-delete
+- No streaks, scores, or scheduling. Drag reorder persists via `reorderGoals` IPC + the `sortOrder` column
 - Confetti (delayed ~400ms) + a "Goal completed" full-screen dialog with a random quote, fired independently (two separate, unsynchronized celebration triggers on the same action)
 
 ### Wishlist (`/wishlist`)
 - CRUD, full complete/uncomplete round-trip (same-day-only undo), soft- or hard-delete depending on tab
-- No `sortOrder` column at all — list order is `createdAt` only; drag reorder is local-state-only, lost on reload
+- Has a `sortOrder` column (backfilled from `createdAt` order via a one-time migration); drag reorder persists via `reorderWishlistItems` IPC
 - Confetti fires immediately on check; no completion dialog (unlike Goals)
 
 ### Projects (`/projects`, "Projects" tab)
@@ -133,14 +134,14 @@ All IDs are UUID text; timestamps are epoch-ms integers; money is `real`; soft-d
 - Payment Projects: create manually or bulk-import from existing Projects (copies name/color); milestones (title/description/amount) toggle paid ↔ unpaid, which inserts/deletes a corresponding payment record so ledger and milestone state stay in sync by construction; ad-hoc manual payment records also supported
 - Derived: paid total (sum of records), remaining = total − paid (**unclamped**, can go negative), % paid (clamped to 100 for the bar)
 - Visualization: hand-rolled SVG donut (paid vs. remaining, 2-slice) per project dashboard; a separate flat Payment History tab lists/sorts/groups all records across projects
-- Currency formatting: `$value.toLocaleString()` — no `Rs.`, unlike Finance
+- Currency: each Payment Project has its own selectable currency (PKR/USD/EUR/GBP), formatted via the shared `Intl.NumberFormat`-based formatter in `src/lib/currency.ts` — no longer hardcoded to `$`
 
 ### Finance (`/finance`)
 - Dashboard tab: monthly budget (single editable settings value), spending log (title/amount/category/date), custom color-tagged categories (soft-delete/archive only), month navigation
 - Derived (all in `shared/financeLogic.ts`, unit-tested, pure functions): month/week sums, remaining-vs-budget (unclamped), 6-month trend series, per-weekday totals for the current week, category breakdown (sorted desc, "Uncategorized" always last)
 - Visualizations: hand-rolled SVG — 6-month line+area trend chart with per-point hover tooltips, a 7-day rounded-bar chart with per-bar hover tooltips, and a category-breakdown donut (no hover)
 - Savings tab: a simple running-sum ledger (amounts can be negative = withdrawal), no goals/targets, no edit capability (create/delete only), no date picker (always "today")
-- Currency formatting: `Rs. value.toLocaleString()`, exclusively
+- Currency: user-selectable (PKR default, plus USD/EUR/GBP) via a `finance_currency` setting, formatted through the same shared `src/lib/currency.ts` formatter used by Payments — no longer hardcoded to `Rs.`
 
 ### Settings (`/settings`)
 Not a "feature" with its own data model, but a control panel over the generic `settings` key/value table: notifications (master + per-domain toggles, active-hours window, min/max interval sliders, test button), habit backfill toggle, 8 rebindable keyboard shortcuts with conflict detection, startup behavior (launch on boot / start minimized / close to tray), a full quotes CRUD/hide panel (bundled quotes can be hidden but never deleted), OpenAI API key entry + connection test, DB path display, JSON export, and app version/about.
@@ -171,19 +172,15 @@ Not a "feature" with its own data model, but a control panel over the generic `s
 ## 6. Current Limitations & Tech Debt
 
 **Confirmed bugs:**
-- `Sidebar`/settings default shortcut for "Add" (Ctrl+N) dispatches a `window` `CustomEvent`, but only the Projects page listens for it — other pages have no global "add" affordance despite the shortcut being labeled generically.
+- `electron/tray.ts` resolves its tray icon from a `buildResources/` directory that is empty/untracked; the actual build config (`package.json`'s `build` field) uses `build/`, which has the real icon files. The tray silently falls back to a blank icon.
 
 **Inconsistencies:**
-- Currency formatting: Finance uses `Rs.`, Payments uses `$` — same app, two money-tracking areas, no shared formatter, no `Intl.NumberFormat` (decimals not normalized, e.g. `"1,234.5"`).
-- Reorder persistence is inconsistent across near-identical features: Habits and Projects persist drag order via a `reorderX` IPC + `sortOrder` column; Goals *have* a `sortOrder` column but no persistence path exists; Wishlist has neither.
-- "Undo completion" rules differ per feature with no stated rationale: Tasks/Wishlist allow same-day-only undo, Goals allow none, Habits allow full toggle (bounded only by the backfill window).
+- "Undo completion" rules are now more consistent (Tasks/Wishlist/Goals all allow same-day-only undo) but Habits still allow full toggle, bounded only by the backfill window — a different model from the other three, likely intentional given how backfilling works, but never explicitly reconciled with them.
 
 **Missing error handling/validation:**
-- `PaymentProjectDashboard`'s total-amount and milestone-amount inputs silently fall back to `0` on invalid input — no inline error shown (contrast with `TransactionModal`, which does show one for the equivalent case).
-- No duplicate-name checks anywhere (projects, payment projects, categories can collide).
-- `reorderProjects` issues N sequential UPDATE statements with no transaction wrapper.
-- `getReport` failures are swallowed silently (`.catch(() => {})`) — a missing/failed report just doesn't render, with no user-facing indication.
-- `computeStreak` hard-caps at 365 iterations, silently truncating longer unbroken streaks with no UI signal that truncation occurred.
+- Duplicate-name validation exists for Projects, Payment Projects, and Finance Categories only — Habit names, Task titles, Goal titles, and Wishlist item titles can still collide with no warning.
+- `PaymentProjectDashboard`'s "Add Payment" (payment-record) amount field still silently blocks invalid/zero input with no visible message — the total-amount and milestone-amount fields on the same page were fixed, this one wasn't in that fix's scope.
+- The chart Y-axis tick-label `k`-suffix formatter is still duplicated between `SpendingTrendChart.tsx` and `WeeklySpendingChart.tsx` (the adjacent axis-*rounding* math was deduplicated; this formatter wasn't in that task's scope).
 
 **Security:**
 - OpenAI API key is stored **in plaintext** in the SQLite `settings` table — no OS keychain/DPAPI encryption. The Settings UI only masks it visually (password-type input with a show/hide toggle).
@@ -193,10 +190,10 @@ Not a "feature" with its own data model, but a control panel over the generic `s
 
 ## 7. Raw Stats
 
-- **Total source files:** 89 TypeScript/TSX files (excluding `node_modules`, `.next`, `dist-electron`, `out`, `release`)
-- **Total lines of code (rough, `src`+`electron`+`shared`):** ~14,331 lines — `src/` 11,137 lines (59 files), `electron/` 2,482 lines (22 files), `shared/` 712 lines (6 files)
-- **React components:** ~50 (under `src/components/`, spanning finance, goals, habit-grid, layout, payments, projects, tasks, ui)
+- **Total source files:** 96 TypeScript/TSX files (excluding `node_modules`, `.next`, `dist-electron`, `out`, `release`)
+- **Total lines of code (rough, `src`+`electron`+`shared`):** ~15,313 lines — `src/` 11,737 lines (66 files), `electron/` 2,843 lines (24 files), `shared/` 733 lines (6 files)
+- **React components:** 42 (`.tsx` files under `src/components/`, spanning finance, goals, habit-grid, layout, payments, projects, settings, tasks, ui)
 - **App routes/pages:** 7 (`/`, `/tasks`, `/wishlist`, `/finance`, `/projects`, `/goals`, `/settings`)
 - **Zustand stores:** 9
-- **Distinct persisted data entities (DB tables):** 15
-- **IPC channels registered:** ~65 handlers across habits, tasks, wishlist, projects, payment projects/milestones/records, finance categories/transactions/savings, goals, settings, reports, quotes, window controls, and app utilities
+- **Distinct persisted data entities (DB tables):** 16
+- **IPC channels registered:** 84 handlers across habits, tasks, wishlist, projects, payment projects/milestones/records, finance categories/transactions/savings, goals, settings, reports, quotes, quote assignments, window controls, and app utilities
