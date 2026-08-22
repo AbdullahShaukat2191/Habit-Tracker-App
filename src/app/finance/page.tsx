@@ -15,6 +15,12 @@ export default function FinancePage() {
 
   useEffect(() => { loadAll() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const handleOpenAdd = () => setShowAddModal(true)
+    window.addEventListener('open-add-modal', handleOpenAdd)
+    return () => window.removeEventListener('open-add-modal', handleOpenAdd)
+  }, [])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-base)', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
       <div style={{ padding: '20px 32px 0', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
