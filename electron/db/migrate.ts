@@ -117,6 +117,13 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
     // Column already exists — safe to ignore
   }
 
+  // Add pinned_at to tasks for existing databases (Today-tab pin/priority feature)
+  try {
+    sqlite.exec('ALTER TABLE tasks ADD COLUMN pinned_at INTEGER')
+  } catch {
+    // Column already exists — safe to ignore
+  }
+
   // Wishlist items table
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS wishlist_items (
@@ -242,6 +249,30 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       tab_id TEXT NOT NULL DEFAULT '',
       quote_id TEXT NOT NULL,
       PRIMARY KEY (page_id, tab_id)
+    )
+  `)
+
+  // Timer: per-project work sessions, plus a single-row settings table for hourly rate/currency
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS timer_sessions (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      name TEXT,
+      started_at INTEGER NOT NULL,
+      total_elapsed INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL,
+      paused_at INTEGER,
+      stopped_at INTEGER,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `)
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS timer_settings (
+      id TEXT PRIMARY KEY,
+      hourly_rate REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'PKR'
     )
   `)
 }

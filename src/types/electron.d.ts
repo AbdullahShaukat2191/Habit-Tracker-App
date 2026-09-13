@@ -17,6 +17,7 @@ import type {
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult, QuoteAssignments,
+  TimerSession, TimerSettings,
 } from '../../shared/types'
 
 interface ElectronAPI {
@@ -34,6 +35,8 @@ interface ElectronAPI {
   updateTask: (id: string, input: UpdateTaskInput) => Promise<Task>
   completeTask: (id: string) => Promise<Task>
   uncompleteTask: (id: string) => Promise<Task>
+  pinTask: (id: string) => Promise<Task>
+  unpinTask: (id: string) => Promise<Task>
   deleteTask: (id: string) => Promise<void>
   hardDeleteTask: (id: string) => Promise<void>
 
@@ -103,6 +106,18 @@ interface ElectronAPI {
 
   getAllQuoteAssignments: () => Promise<QuoteAssignments>
   setQuoteAssignment: (pageId: string, tabId: string, quoteId: string) => Promise<void>
+
+  getTimerSessions: () => Promise<TimerSession[]>
+  getTimerSessionsByProject: (projectId: string) => Promise<TimerSession[]>
+  getActiveSession: () => Promise<TimerSession | null>
+  createTimerSession: (projectId: string, name?: string) => Promise<TimerSession>
+  pauseTimerSession: (id: string) => Promise<TimerSession>
+  resumeTimerSession: (id: string) => Promise<TimerSession>
+  stopTimerSession: (id: string) => Promise<TimerSession>
+  renameTimerSession: (id: string, name: string) => Promise<TimerSession>
+  deleteTimerSession: (id: string) => Promise<void>
+  getTimerSettings: () => Promise<TimerSettings>
+  updateTimerSettings: (hourlyRate: number, currency: string) => Promise<TimerSettings>
 
   getAppVersion: () => Promise<string>
   getDbPath: () => Promise<string>

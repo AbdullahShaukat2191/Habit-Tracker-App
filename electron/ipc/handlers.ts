@@ -10,6 +10,7 @@ import * as quoteAssignmentQueries from '../db/queries/quoteAssignments'
 import * as wishlistQueries from '../db/queries/wishlist'
 import * as paymentQueries from '../db/queries/payments'
 import * as financeQueries from '../db/queries/finance'
+import * as timerQueries from '../db/queries/timerQueries'
 import { getDbPath } from '../db/client'
 import { zoomIn, zoomOut, zoomReset } from '../zoom'
 import fs from 'fs'
@@ -45,6 +46,8 @@ export function registerAllHandlers() {
   handle('tasks:delete', (id) => taskQueries.deleteTask(id))
   handle('tasks:hard-delete', (id) => taskQueries.hardDeleteTask(id))
   handle('tasks:uncomplete', (id) => taskQueries.uncompleteTask(id))
+  handle('tasks:pin', (id) => taskQueries.pinTask(id))
+  handle('tasks:unpin', (id) => taskQueries.unpinTask(id))
 
   // Wishlist
   handle('wishlist:list', () => wishlistQueries.listWishlistItems())
@@ -142,6 +145,19 @@ export function registerAllHandlers() {
   handle('quoteAssignments:set', (pageId, tabId, quoteId) =>
     quoteAssignmentQueries.setQuoteAssignment(pageId, tabId, quoteId)
   )
+
+  // Timer
+  handle('timer:getSessions', () => timerQueries.getTimerSessions())
+  handle('timer:getSessionsByProject', (projectId) => timerQueries.getTimerSessionsByProject(projectId))
+  handle('timer:getActive', () => timerQueries.getActiveSession())
+  handle('timer:create', (projectId, name) => timerQueries.createTimerSession(projectId, name))
+  handle('timer:pause', (id) => timerQueries.pauseTimerSession(id))
+  handle('timer:resume', (id) => timerQueries.resumeTimerSession(id))
+  handle('timer:stop', (id) => timerQueries.stopTimerSession(id))
+  handle('timer:rename', (id, name) => timerQueries.renameTimerSession(id, name))
+  handle('timer:delete', (id) => timerQueries.deleteTimerSession(id))
+  handle('timer:getSettings', () => timerQueries.getTimerSettings())
+  handle('timer:updateSettings', (hourlyRate, currency) => timerQueries.updateTimerSettings(hourlyRate, currency))
 
   // Quit app
   handle('app:quit', () => app.quit())

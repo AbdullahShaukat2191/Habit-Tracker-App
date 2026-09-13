@@ -68,6 +68,7 @@ export const tasks = sqliteTable('tasks', {
   completedAt: integer('completed_at'),
   archivedAt: integer('archived_at'),
   isOptional: integer('is_optional', { mode: 'boolean' }).notNull().default(false),
+  pinnedAt: integer('pinned_at'),
 })
 
 export const goals = sqliteTable('goals', {
@@ -150,4 +151,22 @@ export const financeSavingsEntries = sqliteTable('finance_savings_entries', {
   note: text('note'),
   date: text('date').notNull(), // 'YYYY-MM-DD'
   createdAt: integer('created_at').notNull(),
+})
+
+export const timerSessions = sqliteTable('timer_sessions', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  name: text('name'),
+  startedAt: integer('started_at').notNull(),
+  totalElapsed: integer('total_elapsed').notNull().default(0),
+  status: text('status').notNull(), // 'running' | 'paused' | 'stopped'
+  pausedAt: integer('paused_at'),
+  stoppedAt: integer('stopped_at'),
+  createdAt: integer('created_at').notNull(),
+})
+
+export const timerSettings = sqliteTable('timer_settings', {
+  id: text('id').primaryKey(),
+  hourlyRate: real('hourly_rate').notNull().default(0),
+  currency: text('currency').notNull().default('PKR'),
 })

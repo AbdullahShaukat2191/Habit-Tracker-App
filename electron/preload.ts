@@ -17,6 +17,7 @@ import type {
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult, QuoteAssignments,
+  TimerSession, TimerSettings,
 } from '../shared/types'
 
 const api = {
@@ -53,6 +54,10 @@ const api = {
     ipcRenderer.invoke('tasks:hard-delete', id),
   uncompleteTask: (id: string): Promise<Task> =>
     ipcRenderer.invoke('tasks:uncomplete', id),
+  pinTask: (id: string): Promise<Task> =>
+    ipcRenderer.invoke('tasks:pin', id),
+  unpinTask: (id: string): Promise<Task> =>
+    ipcRenderer.invoke('tasks:unpin', id),
 
   // --- Projects ---
   listProjects: (): Promise<Project[]> =>
@@ -190,6 +195,30 @@ const api = {
     ipcRenderer.invoke('quoteAssignments:getAll'),
   setQuoteAssignment: (pageId: string, tabId: string, quoteId: string): Promise<void> =>
     ipcRenderer.invoke('quoteAssignments:set', pageId, tabId, quoteId),
+
+  // --- Timer ---
+  getTimerSessions: (): Promise<TimerSession[]> =>
+    ipcRenderer.invoke('timer:getSessions'),
+  getTimerSessionsByProject: (projectId: string): Promise<TimerSession[]> =>
+    ipcRenderer.invoke('timer:getSessionsByProject', projectId),
+  getActiveSession: (): Promise<TimerSession | null> =>
+    ipcRenderer.invoke('timer:getActive'),
+  createTimerSession: (projectId: string, name?: string): Promise<TimerSession> =>
+    ipcRenderer.invoke('timer:create', projectId, name),
+  pauseTimerSession: (id: string): Promise<TimerSession> =>
+    ipcRenderer.invoke('timer:pause', id),
+  resumeTimerSession: (id: string): Promise<TimerSession> =>
+    ipcRenderer.invoke('timer:resume', id),
+  stopTimerSession: (id: string): Promise<TimerSession> =>
+    ipcRenderer.invoke('timer:stop', id),
+  renameTimerSession: (id: string, name: string): Promise<TimerSession> =>
+    ipcRenderer.invoke('timer:rename', id, name),
+  deleteTimerSession: (id: string): Promise<void> =>
+    ipcRenderer.invoke('timer:delete', id),
+  getTimerSettings: (): Promise<TimerSettings> =>
+    ipcRenderer.invoke('timer:getSettings'),
+  updateTimerSettings: (hourlyRate: number, currency: string): Promise<TimerSettings> =>
+    ipcRenderer.invoke('timer:updateSettings', hourlyRate, currency),
 
   // --- App ---
   getAppVersion: (): Promise<string> =>

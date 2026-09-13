@@ -14,6 +14,7 @@ function rowToTask(row: typeof tasks.$inferSelect): Task {
     completedAt: row.completedAt ?? null,
     archivedAt: row.archivedAt ?? null,
     isOptional: row.isOptional ?? false,
+    pinnedAt: row.pinnedAt ?? null,
   }
 }
 
@@ -59,7 +60,8 @@ export function updateTask(id: string, input: UpdateTaskInput): Task {
 
 export function completeTask(id: string): Task {
   const db = getDb()
-  db.update(tasks).set({ completedAt: Date.now() }).where(eq(tasks.id, id)).run()
+  // Clear any pin on completion — a completed task has no business sitting in the pinned section.
+  db.update(tasks).set({ completedAt: Date.now(), pinnedAt: null }).where(eq(tasks.id, id)).run()
   return rowToTask(db.select().from(tasks).where(eq(tasks.id, id)).get()!)
 }
 
@@ -76,5 +78,17 @@ export function hardDeleteTask(id: string): void {
 export function uncompleteTask(id: string): Task {
   const db = getDb()
   db.update(tasks).set({ completedAt: null }).where(eq(tasks.id, id)).run()
+  return rowToTask(db.select().from(tasks).where(eq(tasks.id, id)).get()!)
+}
+
+export function pinTask(id: string): Task {
+  const db = getDb()
+  db.update(tasks).set({ pinnedAt: Date.now() }).where(eq(tasks.id, id)).run()
+  return rowToTask(db.select().from(tasks).where(eq(tasks.id, id)).get()!)
+}
+
+export function unpinTask(id: string): Task {
+  const db = getDb()
+  db.update(tasks).set({ pinnedAt: null }).where(eq(tasks.id, id)).run()
   return rowToTask(db.select().from(tasks).where(eq(tasks.id, id)).get()!)
 }

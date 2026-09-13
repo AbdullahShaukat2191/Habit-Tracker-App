@@ -25,6 +25,7 @@ export interface Task {
   completedAt: number | null
   archivedAt: number | null
   isOptional: boolean
+  pinnedAt: number | null
 }
 
 export interface Project {
@@ -268,6 +269,28 @@ export interface CreateQuoteInput {
 export interface UpdateQuoteInput {
   text?: string
   author?: string
+}
+
+// --- Timer ---
+
+export type TimerStatus = 'running' | 'paused' | 'stopped'
+
+export interface TimerSession {
+  id: string
+  projectId: string
+  name: string | null
+  startedAt: number
+  totalElapsed: number
+  status: TimerStatus
+  pausedAt: number | null
+  stoppedAt: number | null
+  createdAt: number
+}
+
+export interface TimerSettings {
+  id: string
+  hourlyRate: number
+  currency: string
 }
 
 export type SettingsMap = Record<string, string>

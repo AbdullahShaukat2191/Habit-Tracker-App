@@ -19,6 +19,7 @@ import type {
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult, QuoteAssignments,
+  TimerSession, TimerSettings,
 } from '../../shared/types'
 
 function api() {
@@ -47,6 +48,8 @@ export const completeTask = (id: string): Promise<Task> => api().completeTask(id
 export const deleteTask = (id: string): Promise<void> => api().deleteTask(id)
 export const hardDeleteTask = (id: string): Promise<void> => api().hardDeleteTask(id)
 export const uncompleteTask = (id: string): Promise<Task> => api().uncompleteTask(id)
+export const pinTask = (id: string): Promise<Task> => api().pinTask(id)
+export const unpinTask = (id: string): Promise<Task> => api().unpinTask(id)
 
 // Projects
 export const listProjects = (): Promise<Project[]> => api().listProjects()
@@ -101,6 +104,19 @@ export const toggleQuoteHidden = (id: string): Promise<void> => api().toggleQuot
 export const getAllQuoteAssignments = (): Promise<QuoteAssignments> => api().getAllQuoteAssignments()
 export const setQuoteAssignment = (pageId: string, tabId: string, quoteId: string): Promise<void> =>
   api().setQuoteAssignment(pageId, tabId, quoteId)
+
+// Timer
+export const getTimerSessions = (): Promise<TimerSession[]> => api().getTimerSessions()
+export const getTimerSessionsByProject = (projectId: string): Promise<TimerSession[]> => api().getTimerSessionsByProject(projectId)
+export const getActiveSession = (): Promise<TimerSession | null> => api().getActiveSession()
+export const createTimerSession = (projectId: string, name?: string): Promise<TimerSession> => api().createTimerSession(projectId, name)
+export const pauseTimerSession = (id: string): Promise<TimerSession> => api().pauseTimerSession(id)
+export const resumeTimerSession = (id: string): Promise<TimerSession> => api().resumeTimerSession(id)
+export const stopTimerSession = (id: string): Promise<TimerSession> => api().stopTimerSession(id)
+export const renameTimerSession = (id: string, name: string): Promise<TimerSession> => api().renameTimerSession(id, name)
+export const deleteTimerSession = (id: string): Promise<void> => api().deleteTimerSession(id)
+export const getTimerSettings = (): Promise<TimerSettings> => api().getTimerSettings()
+export const updateTimerSettings = (hourlyRate: number, currency: string): Promise<TimerSettings> => api().updateTimerSettings(hourlyRate, currency)
 
 // App
 export const getAppVersion = (): Promise<string> => api().getAppVersion()

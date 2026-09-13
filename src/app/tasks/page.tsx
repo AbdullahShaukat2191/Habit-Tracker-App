@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { format, isYesterday } from 'date-fns'
+import { format, isYesterday, isToday } from 'date-fns'
 import type { Quote, CreateTaskInput, Task } from '@shared/types'
 import { useTaskStore } from '@/lib/store/taskStore'
 import { useProjectStore } from '@/lib/store/projectStore'
@@ -18,6 +18,17 @@ import { PageQuote } from '@/components/layout/PageQuote'
 
 function buildGroupLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00')
+  if (isYesterday(date)) return 'Yesterday — ' + format(date, 'EEE MMM d')
+  return format(date, 'EEE MMM d')
+}
+
+// Today tab's date-grouped view only — prefixes today's group with "Today —"
+// in addition to the "Yesterday —" treatment buildGroupLabel already does.
+// Kept separate so the Completed and Optional tabs' date headings (which
+// still call buildGroupLabel) are unaffected.
+function buildTodayTabGroupLabel(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00')
+  if (isToday(date)) return 'Today — ' + format(date, 'EEE MMM d')
   if (isYesterday(date)) return 'Yesterday — ' + format(date, 'EEE MMM d')
   return format(date, 'EEE MMM d')
 }
@@ -49,7 +60,7 @@ export default function TasksPage() {
   const [manualOrder, setManualOrder] = useState<string[] | null>(null)
   const todayTasksRef = useRef<Task[]>([])
 
-  const { tasks, loadTasks, createTask, updateTask, completeTask, uncompleteTask, deleteTask, hardDeleteTask } = useTaskStore()
+  const { tasks, loadTasks, createTask, updateTask, completeTask, uncompleteTask, pinTask, unpinTask, deleteTask, hardDeleteTask } = useTaskStore()
   const { projects, loadProjects } = useProjectStore()
 
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
@@ -141,6 +152,13 @@ export default function TasksPage() {
     })
   }, [tasks, todayStr, sortOrder, activeTasksByProject])
 
+  const pinnedTasks = useMemo(
+    () => todayTasks
+      .filter((t) => t.pinnedAt !== null)
+      .sort((a, b) => (a.pinnedAt as number) - (b.pinnedAt as number)),
+    [todayTasks]
+  )
+
   useEffect(() => { todayTasksRef.current = todayTasks }, [todayTasks])
   useEffect(() => {
     try { localStorage.setItem('tasks:groupByDate', groupByDate ? '1' : '0') } catch {}
@@ -224,6 +242,13 @@ export default function TasksPage() {
     await updateTask(id, { isOptional: !task.isOptional })
   }, [tasks, updateTask])
 
+  const handleTogglePin = useCallback(async (id: string) => {
+    const task = tasks.find((t) => t.id === id)
+    if (!task) return
+    if (task.pinnedAt !== null) await unpinTask(id)
+    else await pinTask(id)
+  }, [tasks, pinTask, unpinTask])
+
   const handleDeleteFromToday = useCallback((id: string) => { setDeletePending({ taskId: id, action: () => deleteTask(id) }) }, [deleteTask])
   const handleDeleteFromCompleted = useCallback((id: string) => { setDeletePending({ taskId: id, action: () => hardDeleteTask(id) }) }, [hardDeleteTask])
   const handleConfirmDelete = useCallback(async () => { if (!deletePending) return; await deletePending.action(); setDeletePending(null) }, [deletePending])
@@ -241,7 +266,9 @@ export default function TasksPage() {
     })
   }, [])
 
-  const isTodayEmpty = todayTasks.length === 0
+  // "Empty" gates the regular flat/grouped list + motivational card only — the
+  // pinned section always renders above it regardless (per spec).
+  const isTodayEmpty = todayTasks.filter((t) => t.pinnedAt === null).length === 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-base)', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
@@ -353,7 +380,8 @@ export default function TasksPage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 32px' }}>
         {activeTab === 'today' ? (
           <TodayView
-            tasks={orderedTodayTasks}
+            tasks={orderedTodayTasks.filter((t) => t.pinnedAt === null)}
+            pinnedTasks={pinnedTasks}
             isEmpty={isTodayEmpty}
             randomQuote={randomQuote}
             projectMap={projectMap}
@@ -369,6 +397,7 @@ export default function TasksPage() {
             onAddTask={() => setShowAddModal(true)}
             onDragEnd={handleDragEnd}
             onToggleOptional={handleToggleOptional}
+            onTogglePin={handleTogglePin}
           />
         ) : activeTab === 'optional' ? (
           <OptionalView
@@ -432,6 +461,7 @@ function SortableTaskItem({
   onDelete,
   onEdit,
   onToggleOptional,
+  onTogglePin,
 }: {
   task: Task
   project?: import('@shared/types').Project
@@ -440,6 +470,7 @@ function SortableTaskItem({
   onDelete: (id: string) => void
   onEdit?: (task: Task) => void
   onToggleOptional?: (id: string) => void
+  onTogglePin?: (id: string) => void
 }) {
   const [hovered, setHovered] = useState(false)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
@@ -481,6 +512,7 @@ function SortableTaskItem({
         onDelete={onDelete}
         onEdit={onEdit}
         onToggleOptional={onToggleOptional}
+        onTogglePin={onTogglePin}
         dragIndicator={dragArrows}
       />
     </div>
@@ -496,6 +528,7 @@ function SortableTaskList({
   onEdit,
   onDragEnd,
   onToggleOptional,
+  onTogglePin,
 }: {
   tasks: Task[]
   projectMap: Map<string, import('@shared/types').Project>
@@ -505,6 +538,7 @@ function SortableTaskList({
   onEdit: (task: Task) => void
   onDragEnd?: (activeId: string, overId: string) => void
   onToggleOptional?: (id: string) => void
+  onTogglePin?: (id: string) => void
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const incompleteIds = tasks.filter((t) => t.completedAt === null).map((t) => t.id)
@@ -531,6 +565,7 @@ function SortableTaskList({
                 onDelete={onDelete}
                 onEdit={onEdit}
                 onToggleOptional={onToggleOptional}
+                onTogglePin={onTogglePin}
               />
             ) : (
               <TaskCard
@@ -552,6 +587,7 @@ function SortableTaskList({
 
 interface TodayViewProps {
   tasks: Task[]
+  pinnedTasks: Task[]
   isEmpty: boolean
   randomQuote: Quote | null
   projectMap: Map<string, import('@shared/types').Project>
@@ -567,25 +603,122 @@ interface TodayViewProps {
   onAddTask: () => void
   onDragEnd?: (activeId: string, overId: string) => void
   onToggleOptional?: (id: string) => void
+  onTogglePin: (id: string) => void
 }
 
-function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortOrder, activeTasksByProject, activeNonOptionalByProject, activeOptionalByProject, onComplete, onUncomplete, onDelete, onEdit, onAddTask, onDragEnd, onToggleOptional }: TodayViewProps) {
+function PinnedPlaceholderCard() {
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 10,
+        padding: '12px 16px',
+        marginBottom: 8,
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          backgroundColor: 'var(--cell-disabled)',
+          flexShrink: 0,
+          marginTop: 1,
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ color: 'var(--text-tertiary)', fontSize: 14, fontWeight: 500 }}>No Tasks Pinned</span>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>
+          Pin urgent tasks here to ensure what needs to be done gets done
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function PinnedSection({
+  pinnedTasks,
+  projectMap,
+  onComplete,
+  onUncomplete,
+  onDelete,
+  onEdit,
+  onToggleOptional,
+  onTogglePin,
+}: {
+  pinnedTasks: Task[]
+  projectMap: Map<string, import('@shared/types').Project>
+  onComplete: (id: string) => void
+  onUncomplete: (id: string) => void
+  onDelete: (id: string) => void
+  onEdit: (task: Task) => void
+  onToggleOptional?: (id: string) => void
+  onTogglePin: (id: string) => void
+}) {
+  return (
+    <div style={{ marginBottom: 40 }}>
+      <h3 style={{ margin: 0, marginBottom: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        Pinned / On Priority
+      </h3>
+      {pinnedTasks.length > 0 ? (
+        pinnedTasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            project={task.projectId ? projectMap.get(task.projectId) : undefined}
+            onComplete={onComplete}
+            onUncomplete={onUncomplete}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onToggleOptional={onToggleOptional}
+            onTogglePin={onTogglePin}
+          />
+        ))
+      ) : (
+        <PinnedPlaceholderCard />
+      )}
+    </div>
+  )
+}
+
+function TodayView({ tasks, pinnedTasks, isEmpty, randomQuote, projectMap, groupByDate, sortOrder, activeTasksByProject, activeNonOptionalByProject, activeOptionalByProject, onComplete, onUncomplete, onDelete, onEdit, onAddTask, onDragEnd, onToggleOptional, onTogglePin }: TodayViewProps) {
+  const pinnedSection = (
+    <PinnedSection
+      pinnedTasks={pinnedTasks}
+      projectMap={projectMap}
+      onComplete={onComplete}
+      onUncomplete={onUncomplete}
+      onDelete={onDelete}
+      onEdit={onEdit}
+      onToggleOptional={onToggleOptional}
+      onTogglePin={onTogglePin}
+    />
+  )
+
   if (isEmpty) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 300 }}>
-        <div style={{ backgroundColor: 'var(--bg-surface)', borderRadius: 16, padding: 40, textAlign: 'center', maxWidth: 480, width: '100%' }}>
-          <p style={{ margin: 0, marginBottom: randomQuote ? 8 : 32, fontSize: 18, color: 'var(--text-primary)', lineHeight: 1.5, fontStyle: randomQuote ? 'italic' : 'normal' }}>
-            {randomQuote ? `"${randomQuote.text}"` : 'Get after it.'}
-          </p>
-          {randomQuote && <p style={{ margin: 0, marginBottom: 32, fontSize: 14, color: 'var(--text-tertiary)' }}>— {randomQuote.author}</p>}
-          <button
-            onClick={onAddTask}
-            style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--accent)', backgroundColor: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background-color 150ms' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-soft)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
-          >
-            Add your first task →
-          </button>
+      <div>
+        {pinnedSection}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 300 }}>
+          <div style={{ backgroundColor: 'var(--bg-surface)', borderRadius: 16, padding: 40, textAlign: 'center', maxWidth: 480, width: '100%' }}>
+            <p style={{ margin: 0, marginBottom: randomQuote ? 8 : 32, fontSize: 18, color: 'var(--text-primary)', lineHeight: 1.5, fontStyle: randomQuote ? 'italic' : 'normal' }}>
+              {randomQuote ? `"${randomQuote.text}"` : 'Get after it.'}
+            </p>
+            {randomQuote && <p style={{ margin: 0, marginBottom: 32, fontSize: 14, color: 'var(--text-tertiary)' }}>— {randomQuote.author}</p>}
+            <button
+              onClick={onAddTask}
+              style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--accent)', backgroundColor: 'transparent', color: 'var(--accent)', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background-color 150ms' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-soft)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            >
+              Add your first task →
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -593,16 +726,20 @@ function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortO
 
   if (!groupByDate) {
     return (
-      <SortableTaskList
-        tasks={tasks}
-        projectMap={projectMap}
-        onComplete={onComplete}
-        onUncomplete={onUncomplete}
-        onDelete={onDelete}
-        onEdit={onEdit}
-        onDragEnd={sortOrder === 'projects' ? undefined : onDragEnd}
-        onToggleOptional={onToggleOptional}
-      />
+      <div>
+        {pinnedSection}
+        <SortableTaskList
+          tasks={tasks}
+          projectMap={projectMap}
+          onComplete={onComplete}
+          onUncomplete={onUncomplete}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onDragEnd={sortOrder === 'projects' ? undefined : onDragEnd}
+          onToggleOptional={onToggleOptional}
+          onTogglePin={onTogglePin}
+        />
+      </div>
     )
   }
 
@@ -616,6 +753,7 @@ function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortO
     }
     return (
       <div>
+        {pinnedSection}
         {Array.from(projectGroups.entries()).map(([projectId, groupTasks]) => {
           const project = projectId ? projectMap.get(projectId) : undefined
           const label = project ? project.name : 'No Project'
@@ -639,6 +777,7 @@ function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortO
                   onDelete={onDelete}
                   onEdit={onEdit}
                   onToggleOptional={onToggleOptional}
+                  onTogglePin={onTogglePin}
                 />
               ))}
             </div>
@@ -662,6 +801,7 @@ function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortO
 
   return (
     <div>
+      {pinnedSection}
       {sortedKeys.map((key) => {
         const groupTasks = (groups.get(key) as Task[]).slice().sort((a, b) =>
           sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt
@@ -669,7 +809,7 @@ function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortO
         return (
           <div key={key} style={{ marginBottom: 20 }}>
             <h3 style={{ margin: 0, marginBottom: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              {buildGroupLabel(key)}
+              {buildTodayTabGroupLabel(key)}
             </h3>
             {groupTasks.map((task) => (
               <TaskCard
@@ -681,6 +821,7 @@ function TodayView({ tasks, isEmpty, randomQuote, projectMap, groupByDate, sortO
                 onDelete={onDelete}
                 onEdit={onEdit}
                 onToggleOptional={onToggleOptional}
+                onTogglePin={onTogglePin}
               />
             ))}
           </div>

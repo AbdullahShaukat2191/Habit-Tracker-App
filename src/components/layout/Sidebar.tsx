@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, CheckSquare, FolderOpen, Target, Settings, Heart, Wallet } from 'lucide-react'
+import { LayoutGrid, CheckSquare, FolderOpen, Target, Settings, Heart, Wallet, Timer } from 'lucide-react'
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import React from 'react'
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/',           icon: LayoutGrid,  label: 'Habit Scorecard' },
   { href: '/tasks',      icon: CheckSquare, label: 'Current Tasks' },
   { href: '/wishlist',   icon: Heart,       label: 'Wish List' },
+  { href: '/timer',      icon: Timer,       label: 'Timer' },
   { href: '/finance',    icon: Wallet,      label: 'Finance' },
   { href: '/projects',   icon: FolderOpen,  label: 'Projects' },
   { href: '/goals',      icon: Target,      label: 'Long-Term Goals' },

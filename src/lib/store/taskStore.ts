@@ -13,6 +13,8 @@ interface TaskStore {
   updateTask: (id: string, input: UpdateTaskInput) => Promise<void>
   completeTask: (id: string) => Promise<Task>
   uncompleteTask: (id: string) => Promise<Task>
+  pinTask: (id: string) => Promise<Task>
+  unpinTask: (id: string) => Promise<Task>
   deleteTask: (id: string) => Promise<void>
   hardDeleteTask: (id: string) => Promise<void>
 }
@@ -51,6 +53,18 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   uncompleteTask: async (id) => {
     const updated = await ipc.uncompleteTask(id)
+    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? updated : t)) }))
+    return updated
+  },
+
+  pinTask: async (id) => {
+    const updated = await ipc.pinTask(id)
+    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? updated : t)) }))
+    return updated
+  },
+
+  unpinTask: async (id) => {
+    const updated = await ipc.unpinTask(id)
     set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? updated : t)) }))
     return updated
   },

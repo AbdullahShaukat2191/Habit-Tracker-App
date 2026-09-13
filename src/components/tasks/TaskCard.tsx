@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Trash2, Pencil, PlusCircle, MinusCircle } from 'lucide-react'
+import { Trash2, Pencil, PlusCircle, MinusCircle, Pin } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Task, Project } from '@shared/types'
 import { taskConfetti } from '@/lib/confetti'
@@ -14,15 +14,17 @@ interface TaskCardProps {
   onDelete: (id: string) => void
   onEdit?: (task: Task) => void
   onToggleOptional?: (id: string) => void
+  onTogglePin?: (id: string) => void
   dragIndicator?: React.ReactNode
 }
 
-const TaskCard = React.memo(function TaskCard({ task, project, onComplete, onUncomplete, onDelete, onEdit, onToggleOptional, dragIndicator }: TaskCardProps) {
+const TaskCard = React.memo(function TaskCard({ task, project, onComplete, onUncomplete, onDelete, onEdit, onToggleOptional, onTogglePin, dragIndicator }: TaskCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const wasCompletedOnMount = useRef(task.completedAt !== null)
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
   const isCompleted = task.completedAt !== null
+  const isPinned = task.pinnedAt !== null
   const completedToday = isCompleted && format(new Date(task.completedAt as number), 'yyyy-MM-dd') === todayStr
   const canUncomplete = isCompleted && completedToday && !!onUncomplete
   const shouldAnimate = isCompleted && !wasCompletedOnMount.current
@@ -161,6 +163,25 @@ const TaskCard = React.memo(function TaskCard({ task, project, onComplete, onUnc
           </p>
         )}
       </div>
+
+      {onTogglePin && !isCompleted && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onTogglePin(task.id) }}
+          title={isPinned ? 'Unpin task' : 'Pin to top'}
+          style={{
+            background: 'none', border: 'none', padding: 4, cursor: 'pointer',
+            color: isPinned ? 'var(--accent)' : 'var(--text-tertiary)',
+            opacity: isHovered || isPinned ? 1 : 0,
+            transition: 'opacity 150ms, color 150ms', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', borderRadius: 4,
+            alignSelf: 'center', flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = isPinned ? 'var(--accent)' : 'var(--text-tertiary)' }}
+        >
+          <Pin size={14} fill={isPinned ? 'var(--accent)' : 'none'} />
+        </button>
+      )}
 
       {onEdit && !isCompleted && (
         <button
