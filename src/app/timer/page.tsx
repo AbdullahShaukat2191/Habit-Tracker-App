@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { PageQuote } from '@/components/layout/PageQuote'
 import { TimerTab } from '@/components/timer/TimerTab'
 import { TimesheetTab } from '@/components/timer/TimesheetTab'
+import { SessionsTab } from '@/components/timer/SessionsTab'
 
 type TimerPageTab = 'timer' | 'timesheet' | 'sessions'
 
@@ -66,25 +67,7 @@ export default function TimerPage() {
 
       {activeTab === 'timer' && <TimerTab />}
       {activeTab === 'timesheet' && <TimesheetTab />}
-      {activeTab === 'sessions' && <ComingSoon />}
-    </div>
-  )
-}
-
-// Sessions (Task 9) sub-tab doesn't exist yet — placeholder only.
-function ComingSoon() {
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--text-tertiary)',
-        fontSize: 14,
-      }}
-    >
-      Coming soon
+      {activeTab === 'sessions' && <SessionsTab />}
     </div>
   )
 }

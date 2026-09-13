@@ -56,12 +56,11 @@ function buildZigzagClipPath(width: number, height: number): string {
 
 interface InvoiceModalProps {
   sessions: TimerSession[]
-  hourlyRate: number
   currency: string | undefined
   onClose: () => void
 }
 
-export function InvoiceModal({ sessions, hourlyRate, currency, onClose }: InvoiceModalProps) {
+export function InvoiceModal({ sessions, currency, onClose }: InvoiceModalProps) {
   // Measures the outer box itself (not the padded inner content div) — clip-path is
   // applied to this box's own border-box, and it carries no padding/border of its own,
   // so its content-box height (what ResizeObserver reports by default) equals the
@@ -88,8 +87,16 @@ export function InvoiceModal({ sessions, hourlyRate, currency, onClose }: Invoic
   }, [])
 
   const totalElapsedMs = useMemo(() => sessions.reduce((sum, s) => sum + s.totalElapsed, 0), [sessions])
-  const totalAmount = (totalElapsedMs / 3600000) * hourlyRate
+  const totalAmount = useMemo(
+    () => sessions.reduce((sum, s) => sum + (s.totalElapsed / 3600000) * s.rateSnapshot, 0),
+    [sessions]
+  )
   const clipPath = useMemo(() => buildZigzagClipPath(RECEIPT_WIDTH, boxHeight), [boxHeight])
+
+  // Every selected session shares one rate → show a single summary "Hourly Rate" line.
+  // Rates differ → drop that line and show each line item's own rate instead.
+  const rates = useMemo(() => new Set(sessions.map((s) => s.rateSnapshot)), [sessions])
+  const uniformRate = rates.size === 1 ? sessions[0]?.rateSnapshot ?? null : null
 
   const hairline = <div style={{ borderTop: `1px solid ${RECEIPT_HAIRLINE}`, margin: '10px 0' }} />
 
@@ -141,7 +148,7 @@ export function InvoiceModal({ sessions, hourlyRate, currency, onClose }: Invoic
 
           <div style={{ margin: '12px 0' }}>
             {sessions.map((session) => {
-              const amount = (session.totalElapsed / 3600000) * hourlyRate
+              const amount = (session.totalElapsed / 3600000) * session.rateSnapshot
               return (
                 <div key={session.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>
@@ -154,6 +161,11 @@ export function InvoiceModal({ sessions, hourlyRate, currency, onClose }: Invoic
                     <div style={{ fontFamily: MONO_FONT, fontSize: 11, color: RECEIPT_MUTED, marginTop: 2 }}>
                       {formatElapsed(session.totalElapsed)}
                     </div>
+                    {uniformRate === null && (
+                      <div style={{ fontFamily: MONO_FONT, fontSize: 11, color: RECEIPT_MUTED, marginTop: 2 }}>
+                        {formatCurrency(currency, session.rateSnapshot)}/hr
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -165,9 +177,11 @@ export function InvoiceModal({ sessions, hourlyRate, currency, onClose }: Invoic
           <div style={{ textAlign: 'right', fontSize: 13, margin: '8px 0' }}>
             Total Hours: <span style={{ fontFamily: MONO_FONT }}>{formatElapsed(totalElapsedMs)}</span>
           </div>
-          <div style={{ textAlign: 'right', fontSize: 13, margin: '8px 0' }}>
-            Hourly Rate: <span style={{ fontFamily: MONO_FONT }}>{formatCurrency(currency, hourlyRate)}</span>
-          </div>
+          {uniformRate !== null && (
+            <div style={{ textAlign: 'right', fontSize: 13, margin: '8px 0' }}>
+              Hourly Rate: <span style={{ fontFamily: MONO_FONT }}>{formatCurrency(currency, uniformRate)}</span>
+            </div>
+          )}
 
           <div style={{ borderTop: `3px double ${RECEIPT_TEXT}`, margin: '12px 0' }} />
 
