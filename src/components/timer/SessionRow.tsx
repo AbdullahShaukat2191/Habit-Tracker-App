@@ -39,7 +39,6 @@ export function SessionRow({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isActive = session.status !== 'stopped'
-  const isRunning = session.status === 'running'
 
   useEffect(() => {
     if (isEditing) inputRef.current?.focus()
@@ -74,7 +73,11 @@ export function SessionRow({
   const lastEnd = session.status !== 'stopped' ? null : (segments[segments.length - 1]?.endedAt ?? session.stoppedAt)
   const spansMultipleDays = !isSameDay(firstStart, lastEnd ?? Date.now())
   const fromLabel = formatSessionTimestamp(firstStart, spansMultipleDays)
-  const toLabel = session.status !== 'stopped' ? 'Running' : formatSessionTimestamp(lastEnd!, spansMultipleDays)
+  const toLabel = session.status === 'running'
+    ? 'Running'
+    : session.status === 'paused'
+      ? 'Paused'
+      : formatSessionTimestamp(lastEnd!, spansMultipleDays)
 
   const earnings = (session.totalElapsed / 3600000) * session.rateSnapshot
 
@@ -83,7 +86,8 @@ export function SessionRow({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)',
+        backgroundColor: isActive ? 'var(--accent-soft)' : 'var(--bg-surface)',
+        border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-subtle)'}`,
         borderRadius: 10, padding: '12px 16px', marginBottom: 8,
         display: 'flex', alignItems: 'center', gap: 12,
       }}
@@ -94,16 +98,6 @@ export function SessionRow({
           checked={isSelected}
           onChange={() => onToggleSelect?.(session.id)}
           style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
-        />
-      )}
-
-      {isActive && (
-        <span
-          className={isRunning ? 'animate-pulse' : ''}
-          style={{
-            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-            backgroundColor: isRunning ? '#4ADE80' : '#FBBF24',
-          }}
         />
       )}
 
@@ -121,12 +115,12 @@ export function SessionRow({
             }}
             style={{
               width: '100%', boxSizing: 'border-box', border: '1px solid var(--timer-input-border)',
-              borderRadius: 6, backgroundColor: 'var(--bg-surface)', padding: '2px 6px',
+              borderRadius: 6, backgroundColor: 'var(--bg-surface)', padding: '2px 6px 2px 14px',
               fontSize: 14, color: 'var(--text-primary)', outline: 'none',
             }}
           />
         ) : (
-          <div style={{ fontSize: 14, fontWeight: 500, color: session.name ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, paddingLeft: 14, color: session.name ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
             {session.name || 'Unnamed Session'}
           </div>
         )}
@@ -144,12 +138,12 @@ export function SessionRow({
         )}
       </div>
 
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-          {formatCurrency(currency, earnings)}
+      <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 24 }}>
+        <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+          {formatElapsed(session.totalElapsed)}
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-          {formatElapsed(session.totalElapsed)}
+          {formatCurrency(currency, earnings)}
         </div>
       </div>
 
