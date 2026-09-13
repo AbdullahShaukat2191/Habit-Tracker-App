@@ -1,6 +1,6 @@
 'use client'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { isWithinInterval, startOfMonth, endOfMonth } from 'date-fns'
+import { isSameDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns'
 import { Receipt, Trash2, X } from 'lucide-react'
 import { useTimerStore } from '@/lib/store/timerStore'
 import { useProjectStore } from '@/lib/store/projectStore'
@@ -10,12 +10,13 @@ import { InvoiceModal } from '@/components/timer/InvoiceModal'
 import { SessionRow } from '@/components/timer/SessionRow'
 import type { TimerSession } from '@shared/types'
 
-type SessionFilter = 'all' | 'week' | 'month'
+type SessionFilter = 'today' | 'week' | 'month' | 'all'
 
 const FILTERS: { id: SessionFilter; label: string }[] = [
-  { id: 'all', label: 'All' },
+  { id: 'today', label: 'Today' },
   { id: 'week', label: 'This Week' },
   { id: 'month', label: 'This Month' },
+  { id: 'all', label: 'All' },
 ]
 
 const badgeStyle: React.CSSProperties = {
@@ -62,7 +63,9 @@ export function SessionsTab() {
   // reordering (this isn't a "what's happening now" view like the Timer tab).
   const filteredSortedSessions = useMemo(() => {
     let list = sessions
-    if (sessionFilter !== 'all') {
+    if (sessionFilter === 'today') {
+      list = list.filter((s) => isSameDay(new Date(s.createdAt), new Date()))
+    } else if (sessionFilter !== 'all') {
       const reference = new Date()
       const interval = sessionFilter === 'week' ? getWeekRange(reference) : { start: startOfMonth(reference), end: endOfMonth(reference) }
       list = list.filter((s) => isWithinInterval(new Date(s.createdAt), interval))
