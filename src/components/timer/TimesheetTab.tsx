@@ -40,11 +40,6 @@ export function TimesheetTab() {
   const handleSelectDay = (date: Date) => {
     const range = getWeekRange(date)
     setSelectedWeekStart(range.start)
-    if (!isSameMonth(date, viewedMonth)) {
-      // Clicking a leading/trailing adjacent-month day must never move the
-      // calendar's displayed month into the future.
-      setViewedMonth(isAfter(date, now) ? now : date)
-    }
   }
 
   // Days (as local-midnight timestamps) that have at least one tracked session.
@@ -111,7 +106,7 @@ export function TimesheetTab() {
             padding: 20,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <button
               onClick={handlePrevMonth}
               aria-label="Previous month"
@@ -156,10 +151,10 @@ export function TimesheetTab() {
                       top: '50%',
                       left: 'calc(100% / 14)',
                       right: 'calc(100% / 14)',
-                      height: 28,
+                      height: 24,
                       transform: 'translateY(-50%)',
                       backgroundColor: 'var(--bg-surface-2)',
-                      borderRadius: 14,
+                      borderRadius: 12,
                       zIndex: 0,
                     }}
                   />
@@ -183,13 +178,13 @@ export function TimesheetTab() {
                       }}
                       style={{
                         position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', padding: '4px 0',
+                        alignItems: 'center', justifyContent: 'center', padding: '2px 0',
                         cursor: 'pointer', userSelect: 'none',
                       }}
                     >
                       <div
                         style={{
-                          width: 28, height: 28, borderRadius: '50%',
+                          width: 24, height: 24, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 13,
                           backgroundColor: isWeekEndpoint ? 'var(--text-primary)' : 'transparent',
@@ -198,7 +193,7 @@ export function TimesheetTab() {
                       >
                         {format(date, 'd')}
                       </div>
-                      <div style={{ height: 6, marginTop: 2 }}>
+                      <div style={{ height: 5, marginTop: 2 }}>
                         {hasSession && (
                           <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'var(--accent)' }} />
                         )}
@@ -236,9 +231,16 @@ export function TimesheetTab() {
             const widthPct = maxDayMs === 0 ? 0 : (dayMs / maxDayMs) * 100
             const isFuture = isAfter(day, now)
             const labelColor = isFuture ? 'var(--text-tertiary)' : 'var(--text-primary)'
+            const isLastRow = idx === weekDays.length - 1
             return (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ width: 104, fontSize: 13, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
+              <div
+                key={idx}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
+                  borderBottom: isLastRow ? 'none' : '1px solid var(--border-subtle)',
+                }}
+              >
+                <div style={{ width: 104, fontSize: 15, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {format(day, 'd EEEE')}
                 </div>
                 <div
@@ -254,7 +256,7 @@ export function TimesheetTab() {
                     }}
                   />
                 </div>
-                <div style={{ width: 80, textAlign: 'right', fontSize: 13, color: labelColor, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ width: 80, textAlign: 'right', fontSize: 15, color: labelColor, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                   {formatHoursMinutes(dayMs)}
                 </div>
               </div>
