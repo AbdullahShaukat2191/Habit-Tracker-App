@@ -1,4 +1,5 @@
 import { format, formatDistanceToNow, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, isSameMonth } from 'date-fns'
+import type { TimerSession } from '@shared/types'
 
 export function formatElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000))
@@ -47,4 +48,11 @@ export function getMonthGridWeeks(monthDate: Date): { date: Date; inMonth: boole
   const weeks: { date: Date; inMonth: boolean }[][] = []
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
   return weeks
+}
+
+// A running session's contribution keeps ticking up live; paused/stopped sessions
+// are already frozen at their stored totalElapsed.
+export function sessionElapsedNow(session: TimerSession, now: number): number {
+  if (session.status === 'running') return session.totalElapsed + (now - session.startedAt)
+  return session.totalElapsed
 }

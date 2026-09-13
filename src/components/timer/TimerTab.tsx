@@ -5,7 +5,7 @@ import { Play, Pause, Square } from 'lucide-react'
 import { useTimerStore } from '@/lib/store/timerStore'
 import { useProjectStore } from '@/lib/store/projectStore'
 import { CURRENCIES, DEFAULT_CURRENCY, getCurrencySymbol, formatCurrency, type CurrencyCode } from '@/lib/currency'
-import { formatElapsed, formatHoursMinutes, formatRelativeAgo, getWeekRange } from '@/lib/timerFormat'
+import { formatElapsed, formatHoursMinutes, formatRelativeAgo, getWeekRange, sessionElapsedNow } from '@/lib/timerFormat'
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal'
 import { SessionRow } from '@/components/timer/SessionRow'
 import { StatBar } from '@/components/timer/StatBar'
@@ -13,13 +13,6 @@ import type { TimerSession } from '@shared/types'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const RECENT_WINDOW_MS = 14 * DAY_MS
-
-// A running session's contribution keeps ticking up live; paused/stopped sessions
-// are already frozen at their stored totalElapsed.
-function sessionElapsedNow(session: TimerSession, now: number): number {
-  if (session.status === 'running') return session.totalElapsed + (now - session.startedAt)
-  return session.totalElapsed
-}
 
 const primaryButtonStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8,
