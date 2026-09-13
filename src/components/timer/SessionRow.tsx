@@ -115,12 +115,12 @@ export function SessionRow({
             }}
             style={{
               width: '100%', boxSizing: 'border-box', border: '1px solid var(--timer-input-border)',
-              borderRadius: 6, backgroundColor: 'var(--bg-surface)', padding: '2px 6px 2px 14px',
+              borderRadius: 6, backgroundColor: 'var(--bg-surface)', padding: `2px 6px 2px ${project ? 14 : 0}px`,
               fontSize: 14, color: 'var(--text-primary)', outline: 'none',
             }}
           />
         ) : (
-          <div style={{ fontSize: 14, fontWeight: 500, paddingLeft: 14, color: session.name ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, paddingLeft: project ? 14 : 0, color: session.name ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
             {session.name || 'Unnamed Session'}
           </div>
         )}
