@@ -33,6 +33,7 @@ export interface Project {
   name: string
   color: string
   sortOrder: number
+  hourlyRate: number | null
   createdAt: number
 }
 
@@ -285,12 +286,21 @@ export interface TimerSession {
   pausedAt: number | null
   stoppedAt: number | null
   createdAt: number
+  rateSnapshot: number
 }
 
 export interface TimerSettings {
   id: string
   hourlyRate: number
   currency: string
+}
+
+export interface TimerSegment {
+  id: string
+  sessionId: string
+  startedAt: number
+  endedAt: number | null
+  createdAt: number
 }
 
 export type SettingsMap = Record<string, string>

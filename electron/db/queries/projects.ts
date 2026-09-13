@@ -10,6 +10,7 @@ function rowToProject(row: typeof projects.$inferSelect): Project {
     name: row.name,
     color: row.color,
     sortOrder: row.sortOrder ?? 0,
+    hourlyRate: row.hourlyRate ?? null,
     createdAt: row.createdAt,
   }
 }

@@ -1,7 +1,7 @@
-import { eq, or, desc } from 'drizzle-orm'
+import { eq, or, desc, and, isNull, inArray } from 'drizzle-orm'
 import { getDb } from '../client'
-import { timerSessions, timerSettings } from '../schema'
-import type { TimerSession, TimerSettings } from '../../../shared/types'
+import { timerSessions, timerSettings, timerSegments, projects } from '../schema'
+import type { TimerSession, TimerSettings, TimerSegment } from '../../../shared/types'
 import { randomUUID } from 'crypto'
 
 const DEFAULT_TIMER_SETTINGS_ID = 'default'
@@ -17,6 +17,7 @@ function rowToSession(row: typeof timerSessions.$inferSelect): TimerSession {
     pausedAt: row.pausedAt ?? null,
     stoppedAt: row.stoppedAt ?? null,
     createdAt: row.createdAt,
+    rateSnapshot: row.rateSnapshot,
   }
 }
 
@@ -26,6 +27,23 @@ function rowToSettings(row: typeof timerSettings.$inferSelect): TimerSettings {
     hourlyRate: row.hourlyRate,
     currency: row.currency,
   }
+}
+
+function rowToSegment(row: typeof timerSegments.$inferSelect): TimerSegment {
+  return {
+    id: row.id,
+    sessionId: row.sessionId,
+    startedAt: row.startedAt,
+    endedAt: row.endedAt ?? null,
+    createdAt: row.createdAt,
+  }
+}
+
+function resolveEffectiveRate(projectId: string): number {
+  const db = getDb()
+  const project = db.select({ hourlyRate: projects.hourlyRate }).from(projects).where(eq(projects.id, projectId)).get()
+  if (project?.hourlyRate != null) return project.hourlyRate
+  return getTimerSettings().hourlyRate
 }
 
 export function getTimerSessions(): TimerSession[] {
@@ -65,19 +83,26 @@ export function createTimerSession(projectId: string, name?: string): TimerSessi
   if (active) {
     stopTimerSession(active.id)
   }
+  const rateSnapshot = resolveEffectiveRate(projectId)
+  const id = randomUUID()
+  const startedAt = Date.now()
   const row = {
-    id: randomUUID(),
+    id,
     projectId,
     name: name ?? null,
-    startedAt: Date.now(),
+    startedAt,
     totalElapsed: 0,
     status: 'running' as const,
     pausedAt: null,
     stoppedAt: null,
     createdAt: Date.now(),
+    rateSnapshot,
   }
-  db.insert(timerSessions).values(row).run()
-  return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, row.id)).get()!)
+  db.transaction((tx) => {
+    tx.insert(timerSessions).values(row).run()
+    tx.insert(timerSegments).values({ id: randomUUID(), sessionId: id, startedAt, endedAt: null, createdAt: Date.now() }).run()
+  })
+  return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()!)
 }
 
 export function pauseTimerSession(id: string): TimerSession {
@@ -89,7 +114,11 @@ export function pauseTimerSession(id: string): TimerSession {
     throw new Error(`Cannot pause a session with status "${session.status}"`)
   }
   const totalElapsed = session.totalElapsed + (Date.now() - session.startedAt)
-  db.update(timerSessions).set({ totalElapsed, pausedAt: Date.now(), status: 'paused' }).where(eq(timerSessions.id, id)).run()
+  const now = Date.now()
+  db.transaction((tx) => {
+    tx.update(timerSessions).set({ totalElapsed, pausedAt: now, status: 'paused' }).where(eq(timerSessions.id, id)).run()
+    tx.update(timerSegments).set({ endedAt: now }).where(and(eq(timerSegments.sessionId, id), isNull(timerSegments.endedAt))).run()
+  })
   return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()!)
 }
 
@@ -101,7 +130,11 @@ export function resumeTimerSession(id: string): TimerSession {
   if (session.status !== 'paused') {
     throw new Error(`Cannot resume a session with status "${session.status}"`)
   }
-  db.update(timerSessions).set({ startedAt: Date.now(), pausedAt: null, status: 'running' }).where(eq(timerSessions.id, id)).run()
+  const now = Date.now()
+  db.transaction((tx) => {
+    tx.update(timerSessions).set({ startedAt: now, pausedAt: null, status: 'running' }).where(eq(timerSessions.id, id)).run()
+    tx.insert(timerSegments).values({ id: randomUUID(), sessionId: id, startedAt: now, endedAt: null, createdAt: now }).run()
+  })
   return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()!)
 }
 
@@ -113,7 +146,11 @@ export function stopTimerSession(id: string): TimerSession {
   const totalElapsed = session.status === 'running'
     ? session.totalElapsed + (Date.now() - session.startedAt)
     : session.totalElapsed
-  db.update(timerSessions).set({ totalElapsed, stoppedAt: Date.now(), status: 'stopped' }).where(eq(timerSessions.id, id)).run()
+  const now = Date.now()
+  db.transaction((tx) => {
+    tx.update(timerSessions).set({ totalElapsed, stoppedAt: now, status: 'stopped' }).where(eq(timerSessions.id, id)).run()
+    tx.update(timerSegments).set({ endedAt: now }).where(and(eq(timerSegments.sessionId, id), isNull(timerSegments.endedAt))).run()
+  })
   return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()!)
 }
 
@@ -143,4 +180,20 @@ export function updateTimerSettings(hourlyRate: number, currency: string): Timer
   const db = getDb()
   db.update(timerSettings).set({ hourlyRate, currency }).where(eq(timerSettings.id, DEFAULT_TIMER_SETTINGS_ID)).run()
   return rowToSettings(db.select().from(timerSettings).where(eq(timerSettings.id, DEFAULT_TIMER_SETTINGS_ID)).get()!)
+}
+
+export function getSegmentsBySession(sessionId: string): TimerSegment[] {
+  const db = getDb()
+  return db.select().from(timerSegments).where(eq(timerSegments.sessionId, sessionId)).orderBy(timerSegments.startedAt).all().map(rowToSegment)
+}
+
+export function getSegmentsForSessions(sessionIds: string[]): TimerSegment[] {
+  if (sessionIds.length === 0) return []
+  const db = getDb()
+  return db.select().from(timerSegments).where(inArray(timerSegments.sessionId, sessionIds)).orderBy(timerSegments.startedAt).all().map(rowToSegment)
+}
+
+export function setProjectHourlyRate(projectId: string, rate: number | null): void {
+  const db = getDb()
+  db.update(projects).set({ hourlyRate: rate }).where(eq(projects.id, projectId)).run()
 }
