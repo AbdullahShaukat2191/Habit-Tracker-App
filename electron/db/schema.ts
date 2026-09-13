@@ -23,6 +23,7 @@ export const projects = sqliteTable('projects', {
   name: text('name').notNull(),
   color: text('color').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  hourlyRate: real('hourly_rate'), // Timer-scoped only — never read/written outside the Timer feature
   createdAt: integer('created_at').notNull(),
 })
 
@@ -163,10 +164,25 @@ export const timerSessions = sqliteTable('timer_sessions', {
   pausedAt: integer('paused_at'),
   stoppedAt: integer('stopped_at'),
   createdAt: integer('created_at').notNull(),
+  // Effective hourly rate resolved at session-creation time (project rate, or the
+  // global default if unset). Earnings for this session always use this value, never
+  // the project's live rate — so a later rate change never retroactively rewrites history.
+  rateSnapshot: real('rate_snapshot').notNull().default(0),
 })
 
 export const timerSettings = sqliteTable('timer_settings', {
   id: text('id').primaryKey(),
   hourlyRate: real('hourly_rate').notNull().default(0),
   currency: text('currency').notNull().default('PKR'),
+})
+
+// Detailed pause/resume breakdown for a session. totalElapsed on timer_sessions
+// remains the authoritative running total everywhere it's already used — segments
+// are additive detail for the From/To/"N work periods" UI, not a replacement.
+export const timerSegments = sqliteTable('timer_segments', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull().references(() => timerSessions.id),
+  startedAt: integer('started_at').notNull(),
+  endedAt: integer('ended_at'), // null = this segment is currently running
+  createdAt: integer('created_at').notNull(),
 })

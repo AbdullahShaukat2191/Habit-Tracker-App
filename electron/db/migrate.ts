@@ -275,4 +275,34 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
       currency TEXT NOT NULL DEFAULT 'PKR'
     )
   `)
+
+  // Per-project hourly rate (Timer feature only — nullable, falls back to the
+  // global timer_settings.hourly_rate when unset)
+  try {
+    sqlite.exec('ALTER TABLE projects ADD COLUMN hourly_rate REAL')
+  } catch {
+    // Column already exists — safe to ignore
+  }
+
+  // Rate snapshot on sessions — existing pre-migration sessions get 0 since their
+  // real historical rate was never recorded; this only affects earnings display
+  // for sessions tracked before this update shipped.
+  try {
+    sqlite.exec('ALTER TABLE timer_sessions ADD COLUMN rate_snapshot REAL NOT NULL DEFAULT 0')
+  } catch {
+    // Column already exists — safe to ignore
+  }
+
+  // Segment-level pause/resume detail. Sessions created before this migration have
+  // no rows here — every read path must fall back to startedAt/stoppedAt for From/To.
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS timer_segments (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      ended_at INTEGER,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES timer_sessions(id)
+    )
+  `)
 }
