@@ -30,10 +30,12 @@
      white-panel problem as above (WCAG contrast vs #FFFFFF: --border-subtle
      ~1.19:1, --border-strong only ~1.39:1 — both effectively invisible hairlines).
      Not reusing --timer-input-border here — that token is scoped to form
-     inputs only, not dividers. This value (~2.24:1 vs white) is clearly more
-     visible while staying a subtle row separator rather than an input-strength
-     border. */
-  --timesheet-divider: #B8A0F5;
+     inputs only, not dividers. WCAG 1.4.11 wants >=3:1 for non-text UI
+     components; this value clears that with real margin (~4.29:1 vs white,
+     verified via the standard sRGB relative-luminance formula) while still
+     rendering as a subtle 1px rule rather than an input-strength border —
+     a 1px stroke reads visually lighter than the same hex as a filled swatch. */
+  --timesheet-divider: #8266DD;
 
   /* Accent — violet */
   --accent:           #6D28D9;
