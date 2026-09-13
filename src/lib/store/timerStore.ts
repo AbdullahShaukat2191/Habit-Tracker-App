@@ -1,18 +1,21 @@
 'use client'
 import { create } from 'zustand'
-import type { TimerSession, TimerSettings } from '../../../shared/types'
+import type { TimerSession, TimerSettings, TimerSegment } from '../../../shared/types'
+import { useProjectStore } from './projectStore'
 import * as ipc from '../ipc'
 
 interface TimerStore {
   sessions: TimerSession[]
   activeSession: TimerSession | null
   settings: TimerSettings | null
+  segmentsBySessionId: Record<string, TimerSegment[]>
   loading: boolean
   error: string | null
 
   loadSessions: () => Promise<void>
   loadActiveSession: () => Promise<void>
   loadSettings: () => Promise<void>
+  loadSegmentsForSessions: (sessionIds: string[]) => Promise<void>
   createSession: (projectId: string, name?: string) => Promise<TimerSession>
   pauseSession: (id: string) => Promise<TimerSession>
   resumeSession: (id: string) => Promise<TimerSession>
@@ -20,12 +23,14 @@ interface TimerStore {
   renameSession: (id: string, name: string) => Promise<TimerSession>
   deleteSession: (id: string) => Promise<void>
   updateSettings: (hourlyRate: number, currency: string) => Promise<TimerSettings>
+  setProjectRate: (projectId: string, rate: number | null) => Promise<void>
 }
 
 export const useTimerStore = create<TimerStore>((set, get) => ({
   sessions: [],
   activeSession: null,
   settings: null,
+  segmentsBySessionId: {},
   loading: false,
   error: null,
 
@@ -106,5 +111,21 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
     const settings = await ipc.updateTimerSettings(hourlyRate, currency)
     set({ settings })
     return settings
+  },
+
+  loadSegmentsForSessions: async (sessionIds) => {
+    if (sessionIds.length === 0) return
+    const segments = await ipc.getSegmentsForSessions(sessionIds)
+    set((s) => {
+      const next = { ...s.segmentsBySessionId }
+      for (const id of sessionIds) next[id] = []
+      for (const seg of segments) next[seg.sessionId] = [...(next[seg.sessionId] ?? []), seg]
+      return { segmentsBySessionId: next }
+    })
+  },
+
+  setProjectRate: async (projectId, rate) => {
+    await ipc.setProjectHourlyRate(projectId, rate)
+    await useProjectStore.getState().loadProjects()
   },
 }))
