@@ -167,7 +167,7 @@ export const timerSessions = sqliteTable('timer_sessions', {
   // Effective hourly rate resolved at session-creation time (project rate, or the
   // global default if unset). Earnings for this session always use this value, never
   // the project's live rate — so a later rate change never retroactively rewrites history.
-  rateSnapshot: real('rate_snapshot').notNull().default(0),
+  rateSnapshot: real('rate_snapshot').notNull(),
 })
 
 export const timerSettings = sqliteTable('timer_settings', {
