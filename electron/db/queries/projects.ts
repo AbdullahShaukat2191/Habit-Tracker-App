@@ -1,6 +1,6 @@
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, inArray } from 'drizzle-orm'
 import { getDb } from '../client'
-import { projects, tasks } from '../schema'
+import { projects, tasks, timerSessions, timerSegments } from '../schema'
 import type { Project, CreateProjectInput, UpdateProjectInput } from '../../../shared/types'
 import { randomUUID } from 'crypto'
 
@@ -55,6 +55,18 @@ export function reorderProjects(ids: string[]): void {
 
 export function deleteProject(id: string): void {
   const db = getDb()
-  db.update(tasks).set({ projectId: null }).where(eq(tasks.projectId, id)).run()
-  db.delete(projects).where(eq(projects.id, id)).run()
+  db.transaction((tx) => {
+    const sessionIds = tx
+      .select({ id: timerSessions.id })
+      .from(timerSessions)
+      .where(eq(timerSessions.projectId, id))
+      .all()
+      .map((row) => row.id)
+    if (sessionIds.length > 0) {
+      tx.delete(timerSegments).where(inArray(timerSegments.sessionId, sessionIds)).run()
+      tx.delete(timerSessions).where(inArray(timerSessions.id, sessionIds)).run()
+    }
+    tx.update(tasks).set({ projectId: null }).where(eq(tasks.projectId, id)).run()
+    tx.delete(projects).where(eq(projects.id, id)).run()
+  })
 }
