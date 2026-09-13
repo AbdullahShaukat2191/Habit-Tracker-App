@@ -19,7 +19,7 @@ import type {
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult, QuoteAssignments,
-  TimerSession, TimerSettings,
+  TimerSession, TimerSettings, TimerSegment,
 } from '../../shared/types'
 
 function api() {
@@ -117,6 +117,9 @@ export const renameTimerSession = (id: string, name: string): Promise<TimerSessi
 export const deleteTimerSession = (id: string): Promise<void> => api().deleteTimerSession(id)
 export const getTimerSettings = (): Promise<TimerSettings> => api().getTimerSettings()
 export const updateTimerSettings = (hourlyRate: number, currency: string): Promise<TimerSettings> => api().updateTimerSettings(hourlyRate, currency)
+export const getSegmentsBySession = (sessionId: string): Promise<TimerSegment[]> => api().getSegmentsBySession(sessionId)
+export const getSegmentsForSessions = (sessionIds: string[]): Promise<TimerSegment[]> => api().getSegmentsForSessions(sessionIds)
+export const setProjectHourlyRate = (projectId: string, rate: number | null): Promise<void> => api().setProjectHourlyRate(projectId, rate)
 
 // App
 export const getAppVersion = (): Promise<string> => api().getAppVersion()

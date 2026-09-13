@@ -17,7 +17,7 @@ import type {
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult, QuoteAssignments,
-  TimerSession, TimerSettings,
+  TimerSession, TimerSettings, TimerSegment,
 } from '../shared/types'
 
 const api = {
@@ -219,6 +219,12 @@ const api = {
     ipcRenderer.invoke('timer:getSettings'),
   updateTimerSettings: (hourlyRate: number, currency: string): Promise<TimerSettings> =>
     ipcRenderer.invoke('timer:updateSettings', hourlyRate, currency),
+  getSegmentsBySession: (sessionId: string): Promise<TimerSegment[]> =>
+    ipcRenderer.invoke('timer:getSegmentsBySession', sessionId),
+  getSegmentsForSessions: (sessionIds: string[]): Promise<TimerSegment[]> =>
+    ipcRenderer.invoke('timer:getSegmentsForSessions', sessionIds),
+  setProjectHourlyRate: (projectId: string, rate: number | null): Promise<void> =>
+    ipcRenderer.invoke('timer:setProjectRate', projectId, rate),
 
   // --- App ---
   getAppVersion: (): Promise<string> =>

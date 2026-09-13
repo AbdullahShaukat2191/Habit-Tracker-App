@@ -158,6 +158,9 @@ export function registerAllHandlers() {
   handle('timer:delete', (id) => timerQueries.deleteTimerSession(id))
   handle('timer:getSettings', () => timerQueries.getTimerSettings())
   handle('timer:updateSettings', (hourlyRate, currency) => timerQueries.updateTimerSettings(hourlyRate, currency))
+  handle('timer:getSegmentsBySession', (sessionId) => timerQueries.getSegmentsBySession(sessionId))
+  handle('timer:getSegmentsForSessions', (sessionIds) => timerQueries.getSegmentsForSessions(sessionIds))
+  handle('timer:setProjectRate', (projectId, rate) => timerQueries.setProjectHourlyRate(projectId, rate))
 
   // Quit app
   handle('app:quit', () => app.quit())

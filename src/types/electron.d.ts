@@ -17,7 +17,7 @@ import type {
   CreateFinanceTransactionInput, UpdateFinanceTransactionInput,
   CreateFinanceSavingsEntryInput,
   SettingsMap, ToggleResult, QuoteAssignments,
-  TimerSession, TimerSettings,
+  TimerSession, TimerSettings, TimerSegment,
 } from '../../shared/types'
 
 interface ElectronAPI {
@@ -118,6 +118,9 @@ interface ElectronAPI {
   deleteTimerSession: (id: string) => Promise<void>
   getTimerSettings: () => Promise<TimerSettings>
   updateTimerSettings: (hourlyRate: number, currency: string) => Promise<TimerSettings>
+  getSegmentsBySession: (sessionId: string) => Promise<TimerSegment[]>
+  getSegmentsForSessions: (sessionIds: string[]) => Promise<TimerSegment[]>
+  setProjectHourlyRate: (projectId: string, rate: number | null) => Promise<void>
 
   getAppVersion: () => Promise<string>
   getDbPath: () => Promise<string>
