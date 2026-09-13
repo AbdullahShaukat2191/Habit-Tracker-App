@@ -233,6 +233,18 @@ export function TimerTab() {
   const isPaused = activeSession?.status === 'paused'
   const isRunning = activeSession?.status === 'running'
 
+  // The project-rate input's currency prefix is rendered as an absolutely-positioned span
+  // inside the input, not a fixed-width character — symbols vary a lot in rendered width
+  // (single-character symbols like $/€/£ vs. PKR's multi-character "Rs." prefix, which is
+  // roughly 2x as wide at this font size). A single fixed paddingLeft either wastes space
+  // for short symbols or lets typed digits butt up against/overlap long ones — PKR is this
+  // app's default currency, so that overlap is the out-of-the-box state, not an edge case.
+  // Widen the input itself too when the symbol is long, since box-sizing: border-box means
+  // extra left padding otherwise eats directly into the usable text-entry width.
+  const currencySymbol = getCurrencySymbol(settings?.currency)
+  const rateInputPaddingLeft = currencySymbol.length > 1 ? 38 : 24
+  const rateInputWidth = currencySymbol.length > 1 ? 104 : 90
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 32px' }}>
       {/* Active Timer section */}
@@ -274,7 +286,7 @@ export function TimerTab() {
                     fontSize: 13, color: 'var(--text-tertiary)', pointerEvents: 'none',
                   }}
                 >
-                  {getCurrencySymbol(settings?.currency)}
+                  {currencySymbol}
                 </span>
                 <input
                   type="number"
@@ -283,7 +295,7 @@ export function TimerTab() {
                   value={projectRateInput}
                   onChange={handleProjectRateChange}
                   disabled={!relevantProjectId}
-                  style={{ ...rateInputStyle, paddingLeft: 24, opacity: relevantProjectId ? 1 : 0.5 }}
+                  style={{ ...rateInputStyle, width: rateInputWidth, paddingLeft: rateInputPaddingLeft, opacity: relevantProjectId ? 1 : 0.5 }}
                 />
               </div>
             </div>
