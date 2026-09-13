@@ -284,13 +284,23 @@ export function runMigrations(sqlite: InstanceType<typeof Database>) {
     // Column already exists — safe to ignore
   }
 
-  // Rate snapshot on sessions — existing pre-migration sessions get 0 since their
-  // real historical rate was never recorded; this only affects earnings display
-  // for sessions tracked before this update shipped.
+  // Rate snapshot on sessions — backfill pre-migration sessions from the single
+  // global rate that was in effect before per-session rates existed (the exact
+  // number the old UI used to compute their earnings), but only on the run that
+  // actually adds the column, so a later manual per-session rate correction is
+  // never silently overwritten on a subsequent launch.
+  let addedRateSnapshot = false
   try {
     sqlite.exec('ALTER TABLE timer_sessions ADD COLUMN rate_snapshot REAL NOT NULL DEFAULT 0')
+    addedRateSnapshot = true
   } catch {
     // Column already exists — safe to ignore
+  }
+  if (addedRateSnapshot) {
+    const defaultRate = sqlite.prepare("SELECT hourly_rate FROM timer_settings WHERE id = 'default'").get() as { hourly_rate: number } | undefined
+    if (defaultRate) {
+      sqlite.prepare('UPDATE timer_sessions SET rate_snapshot = ?').run(defaultRate.hourly_rate)
+    }
   }
 
   // Segment-level pause/resume detail. Sessions created before this migration have

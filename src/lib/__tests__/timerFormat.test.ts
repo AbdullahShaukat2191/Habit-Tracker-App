@@ -1,4 +1,5 @@
-import { formatHoursMinutes, getMonthGridWeeks, getWeekRange } from '../timerFormat'
+import { formatElapsed, formatHoursMinutes, getMonthGridWeeks, getWeekRange, sessionElapsedNow } from '../timerFormat'
+import type { TimerSession } from '@shared/types'
 
 describe('formatHoursMinutes', () => {
   test('formats zero', () => {
@@ -44,5 +45,49 @@ describe('getMonthGridWeeks', () => {
     const inMonthCount = flat.filter((d) => d.inMonth).length
     expect(inMonthCount).toBe(30) // June has 30 days
     expect(flat.some((d) => !d.inMonth)).toBe(true)
+  })
+})
+
+describe('formatElapsed', () => {
+  test('formats zero as 00:00:00', () => {
+    expect(formatElapsed(0)).toBe('00:00:00')
+  })
+  test('formats a value under an hour', () => {
+    // 5 minutes 9 seconds
+    expect(formatElapsed(5 * 60 * 1000 + 9 * 1000)).toBe('00:05:09')
+  })
+  test('formats a value over an hour with zero-padded HH:MM:SS', () => {
+    // 2 hours, 3 minutes, 4 seconds
+    const ms = (2 * 3600 + 3 * 60 + 4) * 1000
+    expect(formatElapsed(ms)).toBe('02:03:04')
+  })
+})
+
+describe('sessionElapsedNow', () => {
+  const baseSession: TimerSession = {
+    id: 's1',
+    projectId: 'p1',
+    name: null,
+    startedAt: 1_000_000,
+    totalElapsed: 60_000,
+    status: 'running',
+    pausedAt: null,
+    stoppedAt: null,
+    createdAt: 1_000_000,
+    rateSnapshot: 0,
+  }
+
+  test('running session adds now - startedAt to totalElapsed', () => {
+    const now = 1_000_000 + 30_000
+    expect(sessionElapsedNow(baseSession, now)).toBe(60_000 + 30_000)
+  })
+
+  test('paused/stopped session ignores now and returns totalElapsed exactly', () => {
+    const pausedSession: TimerSession = { ...baseSession, status: 'paused', pausedAt: 1_050_000 }
+    const now = 1_000_000 + 999_999
+    expect(sessionElapsedNow(pausedSession, now)).toBe(60_000)
+
+    const stoppedSession: TimerSession = { ...baseSession, status: 'stopped', stoppedAt: 1_050_000 }
+    expect(sessionElapsedNow(stoppedSession, now)).toBe(60_000)
   })
 })

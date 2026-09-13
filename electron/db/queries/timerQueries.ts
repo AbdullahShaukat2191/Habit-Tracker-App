@@ -162,7 +162,10 @@ export function renameTimerSession(id: string, name: string): TimerSession {
 
 export function deleteTimerSession(id: string): void {
   const db = getDb()
-  db.delete(timerSessions).where(eq(timerSessions.id, id)).run()
+  db.transaction((tx) => {
+    tx.delete(timerSegments).where(eq(timerSegments.sessionId, id)).run()
+    tx.delete(timerSessions).where(eq(timerSessions.id, id)).run()
+  })
 }
 
 export function getTimerSettings(): TimerSettings {

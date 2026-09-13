@@ -1,5 +1,5 @@
 'use client'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { format, isSameMonth, isSameDay, isAfter, subMonths, addMonths, addDays } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTimerStore } from '@/lib/store/timerStore'
@@ -14,10 +14,15 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export function TimesheetTab() {
-  const { sessions, settings } = useTimerStore()
+  const { sessions, settings, loadSessions, loadSettings } = useTimerStore()
 
   const [viewedMonth, setViewedMonth] = useState(() => new Date())
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getWeekRange(new Date()).start)
+
+  useEffect(() => {
+    loadSessions()
+    loadSettings()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const nowMs = Date.now()
   const now = new Date(nowMs)
@@ -36,7 +41,9 @@ export function TimesheetTab() {
     const range = getWeekRange(date)
     setSelectedWeekStart(range.start)
     if (!isSameMonth(date, viewedMonth)) {
-      setViewedMonth(date)
+      // Clicking a leading/trailing adjacent-month day must never move the
+      // calendar's displayed month into the future.
+      setViewedMonth(isAfter(date, now) ? now : date)
     }
   }
 
@@ -164,7 +171,16 @@ export function TimesheetTab() {
                   return (
                     <div
                       key={key}
+                      role="button"
+                      aria-label={`Select week of ${format(date, 'MMMM d, yyyy')}`}
+                      tabIndex={0}
                       onClick={() => handleSelectDay(date)}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault()
+                          handleSelectDay(date)
+                        }
+                      }}
                       style={{
                         position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center', padding: '4px 0',
@@ -222,7 +238,7 @@ export function TimesheetTab() {
             const labelColor = isFuture ? 'var(--text-tertiary)' : 'var(--text-primary)'
             return (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ width: 92, fontSize: 13, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                <div style={{ width: 104, fontSize: 13, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {format(day, 'd EEEE')}
                 </div>
                 <div

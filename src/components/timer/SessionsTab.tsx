@@ -232,7 +232,7 @@ export function SessionsTab() {
 
       {bulkDeleteConfirm && (
         <ConfirmDeleteModal
-          title={`Delete ${selectedIds.length} sessions?`}
+          title={`Delete ${selectedIds.length} session${selectedIds.length === 1 ? '' : 's'}?`}
           message="These sessions and their tracked time will be removed permanently. This cannot be undone."
           onConfirm={handleConfirmBulkDelete}
           onCancel={() => setBulkDeleteConfirm(false)}
