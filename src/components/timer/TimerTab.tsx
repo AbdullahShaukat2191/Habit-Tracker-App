@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { isWithinInterval, subWeeks } from 'date-fns'
 import { Play, Pause, Square } from 'lucide-react'
 import { useTimerStore } from '@/lib/store/timerStore'
@@ -100,11 +100,28 @@ export function TimerTab() {
 
   // Re-seed the project-rate input whenever the *target project* changes (selection change,
   // or a session starting/stopping) — not on every settings/project store round-trip, so
-  // mid-typing edits aren't clobbered.
+  // mid-typing edits aren't clobbered. Gated on `relevantProject`/`settings` actually being
+  // loaded (rather than just on `relevantProjectId` changing): on a cold nav to /timer with a
+  // session already running, `relevantProjectId` can flip to the real project id before
+  // `loadProjects()` resolves (load order: sessions, active session, settings, projects) — if
+  // we seeded unconditionally at that point, `relevantProject` would still be undefined and
+  // the field would get stuck showing "0" forever, since this effect never fires again for the
+  // same project id. Tracking the last-seeded project id in a ref lets the effect wait for real
+  // data and seed exactly once it arrives, without re-seeding (and clobbering the user's typing)
+  // on every subsequent projects/settings reload for that same project.
+  const seededProjectIdRef = useRef<string | null>(null)
   useEffect(() => {
-    setProjectRateInput(relevantProjectId ? String(effectiveProjectRate) : '')
+    if (!relevantProjectId) {
+      seededProjectIdRef.current = null
+      setProjectRateInput('')
+      return
+    }
+    if (seededProjectIdRef.current === relevantProjectId) return
+    if (!relevantProject || !settings) return // data not loaded yet — wait rather than seed a stale "0"
+    setProjectRateInput(String(effectiveProjectRate))
+    seededProjectIdRef.current = relevantProjectId
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relevantProjectId])
+  }, [relevantProjectId, relevantProject, settings])
 
   const elapsedMs = useMemo(() => {
     if (!activeSession) return 0
