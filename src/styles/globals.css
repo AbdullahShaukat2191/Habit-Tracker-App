@@ -26,6 +26,15 @@
      left untouched since it's used pervasively outside the Timer feature. */
   --timer-input-border: #A78BFA;
 
+  /* Timesheet-tab-only: the day-by-day breakdown's row dividers hit the same
+     white-panel problem as above (WCAG contrast vs #FFFFFF: --border-subtle
+     ~1.19:1, --border-strong only ~1.39:1 — both effectively invisible hairlines).
+     Not reusing --timer-input-border here — that token is scoped to form
+     inputs only, not dividers. This value (~2.24:1 vs white) is clearly more
+     visible while staying a subtle row separator rather than an input-strength
+     border. */
+  --timesheet-divider: #B8A0F5;
+
   /* Accent — violet */
   --accent:           #6D28D9;
   --accent-end:       #7C3AED;

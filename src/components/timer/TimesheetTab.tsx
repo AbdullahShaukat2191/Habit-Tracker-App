@@ -237,10 +237,10 @@ export function TimesheetTab() {
                 key={idx}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
-                  borderBottom: isLastRow ? 'none' : '1px solid var(--border-subtle)',
+                  borderBottom: isLastRow ? 'none' : '1px solid var(--timesheet-divider)',
                 }}
               >
-                <div style={{ width: 104, fontSize: 15, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                <div style={{ width: 120, fontSize: 15, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {format(day, 'd EEEE')}
                 </div>
                 <div
