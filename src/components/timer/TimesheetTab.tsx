@@ -222,8 +222,8 @@ export function TimesheetTab() {
             const labelColor = isFuture ? 'var(--text-tertiary)' : 'var(--text-primary)'
             return (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ width: 40, fontSize: 13, color: labelColor, flexShrink: 0 }}>
-                  {format(day, 'EEE')}
+                <div style={{ width: 92, fontSize: 13, color: labelColor, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  {format(day, 'd EEEE')}
                 </div>
                 <div
                   style={{
