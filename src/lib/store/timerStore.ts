@@ -79,9 +79,16 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
   },
 
   resumeSession: async (id) => {
+    const previouslyActiveId = get().activeSession?.id
     const updated = await ipc.resumeTimerSession(id)
     set((s) => ({
-      sessions: s.sessions.map((sess) => (sess.id === id ? updated : sess)),
+      sessions: s.sessions.map((sess) => {
+        if (sess.id === id) return updated
+        if (previouslyActiveId && sess.id === previouslyActiveId && previouslyActiveId !== id) {
+          return { ...sess, status: 'stopped' as const }
+        }
+        return sess
+      }),
       activeSession: updated,
     }))
     return updated

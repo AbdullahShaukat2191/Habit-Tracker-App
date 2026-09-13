@@ -1,4 +1,4 @@
-import { eq, or, desc, and, isNull, inArray } from 'drizzle-orm'
+import { eq, or, desc, and, isNull, inArray, ne } from 'drizzle-orm'
 import { getDb } from '../client'
 import { timerSessions, timerSettings, timerSegments, projects } from '../schema'
 import type { TimerSession, TimerSettings, TimerSegment } from '../../../shared/types'
@@ -130,12 +130,44 @@ export function resumeTimerSession(id: string): TimerSession {
   if (session.status !== 'paused') {
     throw new Error(`Cannot resume a session with status "${session.status}"`)
   }
+  // Another session may be running/paused right now (e.g. the user started a new
+  // session while this one was paused). Resuming must never leave two sessions
+  // active — stop that other session and resume this one in a single transaction.
+  //
+  // Note: this deliberately queries for an active session excluding `id` directly,
+  // rather than calling getActiveSession() and comparing ids afterward. The target
+  // session is itself always 'paused' at this point (the guard above enforces it),
+  // so it always matches getActiveSession()'s unordered running/paused filter too —
+  // if a genuinely different active row also matches, getActiveSession()'s
+  // un-ordered single-row `.get()` could arbitrarily return the target itself
+  // instead of the other row, causing the real "other" session to go undetected.
+  // Excluding `id` in the WHERE clause makes this unambiguous.
+  const otherRow = db
+    .select()
+    .from(timerSessions)
+    .where(and(or(eq(timerSessions.status, 'running'), eq(timerSessions.status, 'paused')), ne(timerSessions.id, id)))
+    .get()
+  const otherToStop = otherRow ? rowToSession(otherRow) : null
   const now = Date.now()
   db.transaction((tx) => {
+    if (otherToStop) {
+      stopSessionInTx(tx, otherToStop, now)
+    }
     tx.update(timerSessions).set({ startedAt: now, pausedAt: null, status: 'running' }).where(eq(timerSessions.id, id)).run()
     tx.insert(timerSegments).values({ id: randomUUID(), sessionId: id, startedAt: now, endedAt: null, createdAt: now }).run()
   })
   return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()!)
+}
+
+// Core "stop" mutation, shared by stopTimerSession and resumeTimerSession's
+// implicit-stop-of-a-different-session path — both callers wrap this in their
+// own single db.transaction() using the same tx handle passed in here.
+function stopSessionInTx(tx: Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0], session: TimerSession, now: number): void {
+  const totalElapsed = session.status === 'running'
+    ? session.totalElapsed + (now - session.startedAt)
+    : session.totalElapsed
+  tx.update(timerSessions).set({ totalElapsed, stoppedAt: now, status: 'stopped' }).where(eq(timerSessions.id, session.id)).run()
+  tx.update(timerSegments).set({ endedAt: now }).where(and(eq(timerSegments.sessionId, session.id), isNull(timerSegments.endedAt))).run()
 }
 
 export function stopTimerSession(id: string): TimerSession {
@@ -143,13 +175,9 @@ export function stopTimerSession(id: string): TimerSession {
   const row = db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()
   if (!row) throw new Error(`Timer session ${id} not found`)
   const session = rowToSession(row)
-  const totalElapsed = session.status === 'running'
-    ? session.totalElapsed + (Date.now() - session.startedAt)
-    : session.totalElapsed
   const now = Date.now()
   db.transaction((tx) => {
-    tx.update(timerSessions).set({ totalElapsed, stoppedAt: now, status: 'stopped' }).where(eq(timerSessions.id, id)).run()
-    tx.update(timerSegments).set({ endedAt: now }).where(and(eq(timerSegments.sessionId, id), isNull(timerSegments.endedAt))).run()
+    stopSessionInTx(tx, session, now)
   })
   return rowToSession(db.select().from(timerSessions).where(eq(timerSessions.id, id)).get()!)
 }
