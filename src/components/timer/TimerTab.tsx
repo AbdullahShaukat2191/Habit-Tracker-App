@@ -31,12 +31,12 @@ const secondaryButtonStyle: React.CSSProperties = {
 }
 
 const selectStyle: React.CSSProperties = {
-  border: '1px solid var(--border-subtle)', borderRadius: 8, backgroundColor: 'var(--bg-surface)',
+  border: '1px solid var(--timer-input-border)', borderRadius: 8, backgroundColor: 'var(--bg-surface)',
   padding: '8px 12px', fontSize: 14, color: 'var(--text-primary)', outline: 'none', cursor: 'pointer',
 }
 
 const rateInputStyle: React.CSSProperties = {
-  width: 90, border: '1px solid var(--border-subtle)', borderRadius: 8,
+  width: 90, border: '1px solid var(--timer-input-border)', borderRadius: 8,
   backgroundColor: 'var(--bg-surface)', padding: '6px 10px', fontSize: 13,
   color: 'var(--text-primary)', outline: 'none',
 }
@@ -57,6 +57,7 @@ export function TimerTab() {
   const [defaultRateInput, setDefaultRateInput] = useState('')
   const [defaultRateSeeded, setDefaultRateSeeded] = useState(false)
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null)
+  const [startError, setStartError] = useState('')
 
   useEffect(() => {
     loadSessions()
@@ -181,8 +182,13 @@ export function TimerTab() {
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
   const handleStart = useCallback(async () => {
-    if (!selectedProjectId) return
-    await createSession(selectedProjectId, sessionNameInput.trim() || undefined)
+    const trimmedName = sessionNameInput.trim()
+    if (!selectedProjectId || !trimmedName) {
+      setStartError('Please select a project and enter a session name.')
+      return
+    }
+    setStartError('')
+    await createSession(selectedProjectId, trimmedName)
     setSessionNameInput('')
   }, [selectedProjectId, sessionNameInput, createSession])
 
@@ -231,67 +237,79 @@ export function TimerTab() {
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px 32px' }}>
       {/* Active Timer section */}
       <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 32, marginBottom: 32, textAlign: 'center' }}>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
-          <select
-            value={activeSession ? activeSession.projectId : selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            disabled={!!activeSession}
-            style={{ ...selectStyle, minWidth: 220, opacity: activeSession ? 0.7 : 1 }}
-          >
-            <option value="">Select a project…</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {`${p.name} — ${formatCurrency(settings?.currency, p.hourlyRate ?? settings?.hourlyRate ?? 0)}/hr`}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="What are you working on?"
-            value={activeSession ? (activeSession.name ?? '') : sessionNameInput}
-            onChange={(e) => setSessionNameInput(e.target.value)}
-            disabled={!!activeSession}
-            style={{
-              minWidth: 240, border: '1px solid var(--border-subtle)', borderRadius: 8,
-              backgroundColor: 'var(--bg-surface)', padding: '8px 12px', fontSize: 14,
-              color: 'var(--text-primary)', outline: 'none', opacity: activeSession ? 0.7 : 1,
-            }}
-          />
-        </div>
-
-        {/* Rate editors: project-specific override, and the global default it falls back to */}
-        <div style={{ display: 'flex', gap: 24, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Project rate</span>
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{getCurrencySymbol(settings?.currency)}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 24, flexWrap: 'wrap', textAlign: 'left' }}>
+          {/* Left column: session name, project, project rate */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start', flex: 1, minWidth: 220 }}>
             <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={projectRateInput}
-              onChange={handleProjectRateChange}
-              disabled={!relevantProjectId}
-              style={{ ...rateInputStyle, opacity: relevantProjectId ? 1 : 0.5 }}
+              type="text"
+              placeholder="What are you working on?"
+              value={activeSession ? (activeSession.name ?? '') : sessionNameInput}
+              onChange={(e) => { setSessionNameInput(e.target.value); if (startError) setStartError('') }}
+              disabled={!!activeSession}
+              style={{
+                minWidth: 240, border: '1px solid var(--timer-input-border)', borderRadius: 8,
+                backgroundColor: 'var(--bg-surface)', padding: '8px 12px', fontSize: 14,
+                color: 'var(--text-primary)', outline: 'none', opacity: activeSession ? 0.7 : 1,
+              }}
             />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              Default rate <span style={{ color: 'var(--text-tertiary)' }}>(used when a project has no rate of its own)</span>
-            </span>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={defaultRateInput}
-              onChange={handleDefaultRateChange}
-              style={rateInputStyle}
-            />
-            <select value={settings?.currency ?? DEFAULT_CURRENCY} onChange={handleCurrencyChange} style={{ ...selectStyle, padding: '6px 10px', fontSize: 13 }}>
-              {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
-                <option key={code} value={code}>{code} ({CURRENCIES[code].prefix.trim()})</option>
+            <select
+              value={activeSession ? activeSession.projectId : selectedProjectId}
+              onChange={(e) => { setSelectedProjectId(e.target.value); if (startError) setStartError('') }}
+              disabled={!!activeSession}
+              style={{ ...selectStyle, minWidth: 220, opacity: activeSession ? 0.7 : 1 }}
+            >
+              <option value="">Select a project…</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {`${p.name} — ${formatCurrency(settings?.currency, p.hourlyRate ?? settings?.hourlyRate ?? 0)}/hr`}
+                </option>
               ))}
             </select>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Project rate</div>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <span
+                  style={{
+                    position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+                    fontSize: 13, color: 'var(--text-tertiary)', pointerEvents: 'none',
+                  }}
+                >
+                  {getCurrencySymbol(settings?.currency)}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={projectRateInput}
+                  onChange={handleProjectRateChange}
+                  disabled={!relevantProjectId}
+                  style={{ ...rateInputStyle, paddingLeft: 24, opacity: relevantProjectId ? 1 : 0.5 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Upper-right column: currency, default rate */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start', minWidth: 140 }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Currency</div>
+              <select value={settings?.currency ?? DEFAULT_CURRENCY} onChange={handleCurrencyChange} style={{ ...selectStyle, padding: '6px 10px', fontSize: 13 }}>
+                {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
+                  <option key={code} value={code}>{code} ({CURRENCIES[code].prefix.trim()})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Default rate</div>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={defaultRateInput}
+                onChange={handleDefaultRateChange}
+                style={rateInputStyle}
+              />
+            </div>
           </div>
         </div>
 
@@ -308,11 +326,7 @@ export function TimerTab() {
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           {!activeSession && (
-            <button
-              onClick={handleStart}
-              disabled={!selectedProjectId}
-              style={{ ...primaryButtonStyle, opacity: !selectedProjectId ? 0.5 : 1, cursor: !selectedProjectId ? 'not-allowed' : 'pointer' }}
-            >
+            <button onClick={handleStart} style={primaryButtonStyle}>
               <Play size={16} /> Start
             </button>
           )}
@@ -337,6 +351,10 @@ export function TimerTab() {
             </>
           )}
         </div>
+
+        {startError && (
+          <p style={{ margin: '16px 0 0', fontSize: 12, color: '#f87171' }}>{startError}</p>
+        )}
       </div>
 
       {/* Stats bar */}

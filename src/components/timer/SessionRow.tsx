@@ -120,7 +120,7 @@ export function SessionRow({
               else if (e.key === 'Escape') cancelEdit()
             }}
             style={{
-              width: '100%', boxSizing: 'border-box', border: '1px solid var(--border-subtle)',
+              width: '100%', boxSizing: 'border-box', border: '1px solid var(--timer-input-border)',
               borderRadius: 6, backgroundColor: 'var(--bg-surface)', padding: '2px 6px',
               fontSize: 14, color: 'var(--text-primary)', outline: 'none',
             }}

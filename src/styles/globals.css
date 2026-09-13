@@ -19,6 +19,13 @@
   --border-subtle:    #EDE9FE;
   --border-strong:    #DDD6FE;
 
+  /* Timer-feature-only: --border-subtle reads as nearly invisible against the
+     white panel background behind the Timer page's rate/project inputs. This
+     token is deliberately higher-contrast and used ONLY by Timer's form inputs
+     (never card/divider borders, never buttons) — --border-subtle itself is
+     left untouched since it's used pervasively outside the Timer feature. */
+  --timer-input-border: #A78BFA;
+
   /* Accent — violet */
   --accent:           #6D28D9;
   --accent-end:       #7C3AED;

@@ -76,6 +76,7 @@ export function seedQuoteAssignments(db: BetterSQLite3Database<typeof schema>) {
     { pageId: 'goals', tabId: '', quoteId: 'g011' },
     { pageId: 'finance', tabId: '', quoteId: 'b001' },
     { pageId: 'projects', tabId: '', quoteId: 'h024' },
+    { pageId: 'timer', tabId: '', quoteId: 'h002' },
   ]
 
   for (const a of defaults) {
