@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
-import { X } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 import type { TimerSession } from '@shared/types'
 
@@ -10,6 +10,7 @@ const RECEIPT_WIDTH = 380
 const TOOTH_WIDTH = 18
 const TOOTH_HEIGHT = 11
 const CORNER_CHAMFER = 5
+const PAGE_SIZE = 4
 
 const RECEIPT_TEXT = '#1a1a1a'
 const RECEIPT_MUTED = '#6b6b6b'
@@ -54,6 +55,107 @@ function buildZigzagClipPath(width: number, height: number): string {
   return `polygon(${points.join(', ')})`
 }
 
+// The 3-button window always starts at `current` (1 2 3 on page 1, 2 3 4 on
+// page 2, ...), except near the end where it clamps so the final window
+// always shows the last three pages instead of running past `total`.
+function getPageWindow(current: number, total: number): number[] {
+  const size = Math.min(3, total)
+  let start = current
+  if (start + size - 1 > total) start = total - size + 1
+  start = Math.max(1, start)
+  return Array.from({ length: size }, (_, i) => start + i)
+}
+
+interface LineItemProps {
+  session: TimerSession
+  currency: string | undefined
+  showRate: boolean
+  hidden?: boolean
+}
+
+function LineItem({ session, currency, showRate, hidden }: LineItemProps) {
+  const amount = (session.totalElapsed / 3600000) * session.rateSnapshot
+  return (
+    <div
+      aria-hidden={hidden || undefined}
+      style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8,
+        marginBottom: 10, visibility: hidden ? 'hidden' : 'visible',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>
+        {session.name || 'Unnamed Session'}
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ fontFamily: MONO_FONT, fontSize: 14, fontWeight: 600 }}>
+          {formatCurrency(currency, amount)}
+        </div>
+        <div style={{ fontFamily: MONO_FONT, fontSize: 11, color: RECEIPT_MUTED, marginTop: 2 }}>
+          {formatElapsed(session.totalElapsed)}
+        </div>
+        {showRate && (
+          <div style={{ fontFamily: MONO_FONT, fontSize: 11, color: RECEIPT_MUTED, marginTop: 2 }}>
+            {formatCurrency(currency, session.rateSnapshot)}/hr
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface PaginationControlProps {
+  page: number
+  totalPages: number
+  onChange: (page: number) => void
+}
+
+function PaginationControl({ page, totalPages, onChange }: PaginationControlProps) {
+  const pageWindow = getPageWindow(page, totalPages)
+  const plainButtonStyle: React.CSSProperties = {
+    width: 26, height: 26, borderRadius: 6, border: `1px solid ${RECEIPT_HAIRLINE}`,
+    backgroundColor: '#ffffff', color: RECEIPT_TEXT, fontSize: 12, fontFamily: MONO_FONT,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+  }
+  const activeButtonStyle: React.CSSProperties = {
+    ...plainButtonStyle, backgroundColor: 'var(--accent)', borderColor: 'var(--accent)', color: '#ffffff', fontWeight: 700,
+  }
+  const disabledChevronStyle: React.CSSProperties = {
+    ...plainButtonStyle, color: RECEIPT_MUTED, opacity: 0.4, cursor: 'default',
+  }
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, margin: '12px 0' }}>
+      <button
+        aria-label="Previous page"
+        disabled={page === 1}
+        onClick={() => onChange(page - 1)}
+        style={page === 1 ? disabledChevronStyle : plainButtonStyle}
+      >
+        <ChevronLeft size={14} />
+      </button>
+      {pageWindow.map((p) => (
+        <button
+          key={p}
+          aria-label={`Page ${p}`}
+          aria-current={p === page || undefined}
+          onClick={() => onChange(p)}
+          style={p === page ? activeButtonStyle : plainButtonStyle}
+        >
+          {p}
+        </button>
+      ))}
+      <button
+        aria-label="Next page"
+        disabled={page === totalPages}
+        onClick={() => onChange(page + 1)}
+        style={page === totalPages ? disabledChevronStyle : plainButtonStyle}
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+}
+
 interface InvoiceModalProps {
   sessions: TimerSession[]
   currency: string | undefined
@@ -67,6 +169,7 @@ export function InvoiceModal({ sessions, currency, onClose }: InvoiceModalProps)
   // full rendered height the zigzag needs to match.
   const boxRef = useRef<HTMLDivElement>(null)
   const [boxHeight, setBoxHeight] = useState(0)
+  const [page, setPage] = useState(1)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -97,6 +200,10 @@ export function InvoiceModal({ sessions, currency, onClose }: InvoiceModalProps)
   // Rates differ → drop that line and show each line item's own rate instead.
   const rates = useMemo(() => new Set(sessions.map((s) => s.rateSnapshot)), [sessions])
   const uniformRate = rates.size === 1 ? sessions[0]?.rateSnapshot ?? null : null
+
+  const isPaginated = sessions.length > PAGE_SIZE
+  const totalPages = Math.max(1, Math.ceil(sessions.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
 
   const hairline = <div style={{ borderTop: `1px solid ${RECEIPT_HAIRLINE}`, margin: '10px 0' }} />
 
@@ -146,31 +253,49 @@ export function InvoiceModal({ sessions, currency, onClose }: InvoiceModalProps)
 
           {hairline}
 
-          <div style={{ margin: '12px 0' }}>
-            {sessions.map((session) => {
-              const amount = (session.totalElapsed / 3600000) * session.rateSnapshot
-              return (
-                <div key={session.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
-                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>
-                    {session.name || 'Unnamed Session'}
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontFamily: MONO_FONT, fontSize: 14, fontWeight: 600 }}>
-                      {formatCurrency(currency, amount)}
+          {isPaginated && (
+            <PaginationControl page={currentPage} totalPages={totalPages} onChange={setPage} />
+          )}
+
+          {isPaginated ? (
+            <div style={{ overflow: 'hidden', margin: '12px 0' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  transform: `translateX(-${(currentPage - 1) * 100}%)`,
+                  transition: 'transform 200ms ease-out',
+                }}
+              >
+                {Array.from({ length: totalPages }, (_, pageIndex) => {
+                  const start = pageIndex * PAGE_SIZE
+                  const pageSessions = sessions.slice(start, start + PAGE_SIZE)
+                  const placeholderCount = PAGE_SIZE - pageSessions.length
+                  return (
+                    <div key={pageIndex} style={{ flex: '0 0 100%', minWidth: '100%' }}>
+                      {pageSessions.map((session) => (
+                        <LineItem key={session.id} session={session} currency={currency} showRate={uniformRate === null} />
+                      ))}
+                      {Array.from({ length: placeholderCount }, (_, i) => (
+                        <LineItem
+                          key={`placeholder-${i}`}
+                          session={pageSessions[0] ?? sessions[0]}
+                          currency={currency}
+                          showRate={uniformRate === null}
+                          hidden
+                        />
+                      ))}
                     </div>
-                    <div style={{ fontFamily: MONO_FONT, fontSize: 11, color: RECEIPT_MUTED, marginTop: 2 }}>
-                      {formatElapsed(session.totalElapsed)}
-                    </div>
-                    {uniformRate === null && (
-                      <div style={{ fontFamily: MONO_FONT, fontSize: 11, color: RECEIPT_MUTED, marginTop: 2 }}>
-                        {formatCurrency(currency, session.rateSnapshot)}/hr
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <div style={{ margin: '12px 0' }}>
+              {sessions.map((session) => (
+                <LineItem key={session.id} session={session} currency={currency} showRate={uniformRate === null} />
+              ))}
+            </div>
+          )}
 
           {hairline}
 
