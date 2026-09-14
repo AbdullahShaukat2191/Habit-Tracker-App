@@ -308,14 +308,19 @@ export function InvoiceModal({ sessions, currency, onClose }: InvoiceModalProps)
             </div>
           )}
 
-          <div style={{ borderTop: `3px double ${RECEIPT_TEXT}`, margin: '12px 0' }} />
+          <div style={{ borderTop: `3px double ${RECEIPT_TEXT}`, margin: '12px 0 16px' }} />
 
-          <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: 16, fontWeight: 700, marginRight: 8 }}>Total:</span>
-            <span style={{ fontFamily: MONO_FONT, fontSize: 22, fontWeight: 800 }}>{formatCurrency(currency, totalAmount)}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 11, color: RECEIPT_MUTED }}>
+              Page {currentPage}/{totalPages}
+            </span>
+            <span>
+              <span style={{ fontSize: 16, fontWeight: 700, marginRight: 8 }}>Total:</span>
+              <span style={{ fontFamily: MONO_FONT, fontSize: 22, fontWeight: 800 }}>{formatCurrency(currency, totalAmount)}</span>
+            </span>
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: RECEIPT_MUTED, letterSpacing: '4px' }}>
+          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: RECEIPT_MUTED, letterSpacing: '4px' }}>
             Thank You
           </div>
         </div>
