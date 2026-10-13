@@ -43,6 +43,7 @@ const HabitCellInner = ({ dateStr, today, state, isToday, allowPastDays, onToggl
       role={isClickable ? 'checkbox' : undefined}
       aria-checked={isClickable ? state === 'filled' : undefined}
       aria-label={dateStr}
+      data-date={dateStr}
       tabIndex={isClickable ? 0 : -1}
       onClick={(e) => handleClick(e)}
       onKeyDown={(e) => {

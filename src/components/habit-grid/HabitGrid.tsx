@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getDaysInMonth, format } from 'date-fns'
 import {
@@ -70,6 +70,19 @@ export function HabitGrid({
   const daysInMonth = getDaysInMonth(new Date(year, monthNum - 1))
 
   const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS))
+
+  // Hovered cell → highlight its date header and habit name (delegated, one listener for the whole grid)
+  const [hovered, setHovered] = useState<{ habitId: string; date: string } | null>(null)
+  const handleCellHover = useCallback((e: React.MouseEvent) => {
+    const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-date]')
+    const habitId = cell?.closest<HTMLElement>('[data-habit-id]')?.dataset.habitId
+    const date = cell?.dataset.date
+    setHovered((prev) =>
+      habitId && date
+        ? prev?.habitId === habitId && prev.date === date ? prev : { habitId, date }
+        : prev ? null : prev
+    )
+  }, [])
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -208,6 +221,7 @@ export function HabitGrid({
                 currentMonth={currentMonth}
                 today={today}
                 perfectDays={perfectDays}
+                highlightDate={hovered?.date}
               />
 
               {habits.length === 0 ? (
@@ -222,7 +236,11 @@ export function HabitGrid({
                   No habits yet. Click &quot;+ Add Habit&quot; to get started.
                 </div>
               ) : (
-                <div style={{ paddingBottom: 8 }}>
+                <div
+                  style={{ paddingBottom: 8 }}
+                  onMouseOver={handleCellHover}
+                  onMouseLeave={() => setHovered(null)}
+                >
                   <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
                     <SortableContext items={habitIds} strategy={verticalListSortingStrategy}>
                       {habits.map((habit) => (
@@ -236,6 +254,7 @@ export function HabitGrid({
                           onToggle={onToggle}
                           onEditHabit={onEditHabit}
                           onDeleteHabit={onDeleteHabit}
+                          highlightName={hovered?.habitId === habit.id}
                         />
                       ))}
                     </SortableContext>

@@ -9,9 +9,10 @@ interface HabitGridHeaderProps {
   currentMonth: string
   today: string
   perfectDays: Set<string>
+  highlightDate?: string | null
 }
 
-const HabitGridHeaderInner = ({ daysInMonth, currentMonth, today, perfectDays }: HabitGridHeaderProps) => {
+const HabitGridHeaderInner = ({ daysInMonth, currentMonth, today, perfectDays, highlightDate }: HabitGridHeaderProps) => {
   const days: React.ReactNode[] = []
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -20,7 +21,13 @@ const HabitGridHeaderInner = ({ daysInMonth, currentMonth, today, perfectDays }:
     const isPerfect = perfectDays.has(dateStr)
     const dow = DOW[new Date(`${dateStr}T12:00:00`).getDay()]
 
-    const bgColor = isPerfect ? '#EA580C' : isToday ? 'var(--accent)' : 'transparent'
+    const bgColor = isPerfect
+      ? '#EA580C'
+      : isToday
+      ? 'var(--accent)'
+      : dateStr === highlightDate
+      ? 'var(--accent-highlight)'
+      : 'transparent'
     const numColor = isPerfect || isToday ? '#FFFFFF' : 'var(--text-tertiary)'
     const dowColor = isPerfect ? 'rgba(255,255,255,0.8)' : isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-tertiary)'
 

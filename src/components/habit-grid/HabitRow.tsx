@@ -30,9 +30,11 @@ interface HabitRowProps {
   onToggle: (habitId: string, date: string) => void
   onEditHabit: (habit: Habit) => void
   onDeleteHabit: (habitId: string) => void
+  highlightName?: boolean
 }
 
 const DRAG_HANDLE_WIDTH = 28
+const NAME_HIGHLIGHT_GAP = 8 // space between the name highlight and the day-1 cell
 
 const HabitRowInner = ({
   habit,
@@ -43,6 +45,7 @@ const HabitRowInner = ({
   onToggle,
   onEditHabit,
   onDeleteHabit,
+  highlightName,
 }: HabitRowProps) => {
   const [isHovered, setIsHovered] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -141,6 +144,7 @@ const HabitRowInner = ({
   return (
     <div
       ref={setNodeRef}
+      data-habit-id={habit.id}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -175,13 +179,18 @@ const HabitRowInner = ({
       {/* Habit name — clickable to edit */}
       <div
         style={{
-          width: NAME_COL_WIDTH - DRAG_HANDLE_WIDTH,
-          minWidth: NAME_COL_WIDTH - DRAG_HANDLE_WIDTH,
-          paddingRight: 12,
+          width: NAME_COL_WIDTH - DRAG_HANDLE_WIDTH - NAME_HIGHLIGHT_GAP,
+          minWidth: NAME_COL_WIDTH - DRAG_HANDLE_WIDTH - NAME_HIGHLIGHT_GAP,
+          marginRight: NAME_HIGHLIGHT_GAP,
+          paddingLeft: 8,
+          paddingRight: 4,
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           overflow: 'hidden',
+          backgroundColor: highlightName ? 'var(--accent-highlight)' : 'transparent',
+          borderRadius: 4,
+          transition: 'background-color 120ms',
         }}
       >
         <button
